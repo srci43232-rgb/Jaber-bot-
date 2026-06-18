@@ -1,116 +1,202 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField, ChannelType } = require('discord.js');
 const express = require('express');
-const fs = require('fs');
-require('dotenv').config();
-
 const app = express();
+
+// ====== إعدادات البوت ======
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
+  ],
+  partials: [Partials.Channel]
 });
 
-// بيانات البانل - هتتعدل من الموقع
-let panelData = {
-    title: '👑│نظام التذاكر الأسطوري│👑',
-    description: '> **أهلاً بك في إمبراطورية الدعم الفني** ✨\n> \n> **▬▬▬**\n> \n> **⚡ اختر خدمتك من الأزرار بالأسفل وسيتم فتح تذكرة خاصة بك فوراً**\n> \n> **🎨 طلب بنر** ⇢ تصميم بنرات احترافية بمقاسات مخصصة\n> **✨ طلب استيكر** ⇢ ستكرات ديسكورد فخمة بستايلك\n> **🛠️ الدعم الفني** ⇢ حل جميع مشاكلك التقنية\n> \n> **▬▬▬**',
-    color: '#FFD700'
+// ====== بيانات البانل - هتتغير من لوحة التحكم ======
+let panelConfig = {
+  title: '👑│نظام التذاكر الأسطوري│👑',
+  description: `**أهلاً بك في إمبراطورية الدعم الفني** ✨
+
+**▬▬▬**
+
+> **🎯 اختر نوع تذكرتك بعناية فائقة**
+> **⚡ فريقنا الأسطوري في انتظارك 24/7**
+> **🔥 سرعة، احترافية، وخصوصية تامة**
+
+**▬▬▬**
+
+**📌 ملاحظة هامة:**
+افتح تذكرتك وسيتم الرد عليك فوراً`,
+  color: 'FFD700'
 };
 
-// تحميل البيانات لو موجودة
-if (fs.existsSync('./panel.json')) {
-    panelData = JSON.parse(fs.readFileSync('./panel.json', 'utf8'));
-}
-
+// ====== سيرفر الويب + لوحة التحكم ======
 app.use(express.urlencoded({ extended: true }));
 
-// صفحة الويب للتعديل
 app.get('/', (req, res) => {
-    res.send(`
-    <html dir="rtl">
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>لوحة تحكم البوت</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body { font-family: sans-serif; background: #1a1a1a; color: #fff; padding: 20px; max-width: 600px; margin: auto; }
-            input, textarea { width: 100%; padding: 10px; margin: 10px 0; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 5px; }
-            textarea { height: 200px; }
-            button { background: #5865F2; color: white; padding: 15px; border: none; border-radius: 5px; width: 100%; font-size: 18px; cursor: pointer; }
-            label { font-weight: bold; display: block; margin-top: 15px; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                font-family: 'Segoe UI', Tahoma, sans-serif; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }
+           .container { 
+                max-width: 600px; 
+                margin: 0 auto; 
+                background: #1e1e2e; 
+                padding: 30px; 
+                border-radius: 20px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            }
+            h1 { 
+                color: #FFD700; 
+                text-align: center; 
+                margin-bottom: 30px;
+                font-size: 28px;
+            }
+            label { 
+                color: #cdd6f4; 
+                display: block; 
+                margin-top: 20px; 
+                margin-bottom: 8px;
+                font-weight: bold;
+            }
+            input, textarea { 
+                width: 100%; 
+                padding: 12px; 
+                background: #313244; 
+                border: 2px solid #45475a; 
+                border-radius: 10px; 
+                color: #cdd6f4;
+                font-size: 16px;
+                transition: all 0.3s;
+            }
+            input:focus, textarea:focus {
+                outline: none;
+                border-color: #FFD700;
+            }
+            textarea { 
+                min-height: 200px; 
+                resize: vertical;
+                font-family: inherit;
+            }
+            button { 
+                width: 100%;
+                background: linear-gradient(135deg, #FFD700, #FFA500); 
+                color: #1e1e2e; 
+                padding: 15px; 
+                border: none; 
+                border-radius: 10px; 
+                font-size: 18px;
+                font-weight: bold;
+                cursor: pointer; 
+                margin-top: 25px;
+                transition: transform 0.2s;
+            }
+            button:hover {
+                transform: translateY(-2px);
+            }
+           .success {
+                background: #a6e3a1;
+                color: #1e1e2e;
+                padding: 15px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+                text-align: center;
+                font-weight: bold;
+            }
         </style>
     </head>
     <body>
-        <h1>👑 لوحة تحكم بانل التذاكر</h1>
-        <form method="POST" action="/save">
-            <label>عنوان البانل:</label>
-            <input name="title" value="${panelData.title}" required>
-
-            <label>الوصف:</label>
-            <textarea name="description" required>${panelData.description}</textarea>
-
-            <label>اللون Hex بدون #:</label>
-            <input name="color" value="${panelData.color.replace('#', '')}" placeholder="FFD700" required>
-
-            <button type="submit">💾 حفظ وتحديث البوت</button>
-        </form>
-        <p style="text-align:center;margin-top:20px;">بعد الحفظ البوت هيعمل ريستارت لوحده خلال 3 ثواني</p>
+        <div class="container">
+            <h1>👑 لوحة تحكم بانل التذاكر</h1>
+            ${req.query.success? '<div class="success">✅ تم الحفظ! البوت هيعمل ريستارت دلوقتي</div>' : ''}
+            <form method="POST" action="/update">
+                <label>عنوان البانل:</label>
+                <input type="text" name="title" value="${panelConfig.title}" required>
+                
+                <label>الوصف:</label>
+                <textarea name="description" required>${panelConfig.description}</textarea>
+                
+                <label>اللون Hex بدون #:</label>
+                <input type="text" name="color" value="${panelConfig.color}" placeholder="FFD700" required>
+                
+                <button type="submit">💾 حفظ وتحديث البوت</button>
+            </form>
+        </div>
     </body>
     </html>
-    `);
+  `);
 });
 
-// حفظ التعديلات
-app.post('/save', (req, res) => {
-    panelData = {
-        title: req.body.title,
-        description: req.body.description,
-        color: '#' + req.body.color
-    };
-
-    fs.writeFileSync('./panel.json', JSON.stringify(panelData, null, 2));
-    res.send('<h1 style="text-align:center;font-family:sans-serif;">✅ تم الحفظ! البوت هيعمل ريستارت دلوقتي...</h1>');
-
-    setTimeout(() => process.exit(0), 3000);
+app.post('/update', (req, res) => {
+  panelConfig.title = req.body.title;
+  panelConfig.description = req.body.description;
+  panelConfig.color = req.body.color.replace('#', '');
+  res.redirect('/?success=true');
+  setTimeout(() => process.exit(0), 1000); // ريستارت عشان يحدث البوت
 });
 
-// تشغيل السيرفر
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Web panel running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🌐 لوحة التحكم شغالة على بورت ${PORT}`));
 
-// بوت الديسكورد
+// ====== كود البوت ======
 client.once('ready', () => {
-    console.log(`Bot: ${client.user.tag}`);
+  console.log(`✅ ${client.user.tag} شغال`);
+});
+
+client.on('messageCreate', async message => {
+  if (message.content === '/setup' && message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+    const embed = new EmbedBuilder()
+     .setTitle(panelConfig.title)
+     .setDescription(panelConfig.description)
+     .setColor(parseInt(panelConfig.color, 16));
+
+    const row = new ActionRowBuilder()
+     .addComponents(
+        new ButtonBuilder()
+         .setCustomId('create_ticket')
+         .setLabel('🎫 فتح تذكرة')
+         .setStyle(ButtonStyle.Success)
+      );
+
+    await message.channel.send({ embeds: [embed], components: [row] });
+    await message.delete();
+  }
 });
 
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-
-    if (interaction.commandName === 'setup') {
-        const embed = new EmbedBuilder()
-         .setTitle(panelData.title)
-         .setDescription(panelData.description)
-         .setColor(panelData.color)
-         .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
-         .setFooter({ text: `⚡ ${interaction.guild.name}`, iconURL: client.user.displayAvatarURL() })
-         .setTimestamp();
-
-        const row = new ActionRowBuilder()
-         .addComponents(
-                new ButtonBuilder().setCustomId('banner').setLabel('🎨 طلب بنر').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('sticker').setLabel('✨ طلب استيكر').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('support').setLabel('🛠️ الدعم الفني').setStyle(ButtonStyle.Danger)
-            );
-
-        await interaction.reply({ embeds: [embed], components: [row] });
-    }
-});
-
-// تسجيل أمر /setup
-client.on('ready', async () => {
-    const { REST, Routes, SlashCommandBuilder } = require('discord.js');
-    const commands = [new SlashCommandBuilder().setName('setup').setDescription('Create ticket panel')];
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-    try {
-        await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
-    } catch (err) {}
+  if (!interaction.isButton()) return;
+  
+  if (interaction.customId === 'create_ticket') {
+    const channel = await interaction.guild.channels.create({
+      name: `ticket-${interaction.user.username}`,
+      type: ChannelType.GuildText,
+      permissionOverwrites: [
+        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+        { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+      ]
+    });
+    
+    await interaction.reply({ content: `✅ تذكرتك اتفتحت: ${channel}`, ephemeral: true });
+    
+    const embed = new EmbedBuilder()
+     .setTitle('🎫 تذكرتك اتفتحت')
+     .setDescription(`أهلاً ${interaction.user}\nفريق الدعم هيرد عليك قريباً`)
+     .setColor(0x00FF00);
+      
+    await channel.send({ content: `${interaction.user}`, embeds: [embed] });
+  }
 });
 
 client.login(process.env.TOKEN);
