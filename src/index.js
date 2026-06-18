@@ -1,114 +1,233 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ChannelType, PermissionsBitField, ModalBuilder, TextInputStyle, AttachmentBuilder } = require("discord.js");
+const {
+    Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder,
+    ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder,
+    TextInputStyle, ChannelType, PermissionFlagsBits
+} = require('discord.js');
 
-const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
-
-const tickets = new Map();
-const LOG_CHANNEL_ID = "1511144814089994372";
-
-client.once("clientReady", () => {
-console.log("Bot Ready - FINAL 100%");
-console.log(`Logged in as ${client.user.tag}`);
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 
-client.on("interactionCreate", async interaction => {
-try {
-if (!interaction.guild) return;
-if (interaction.isChatInputCommand() && interaction.commandName === "setup") {
-const file = new AttachmentBuilder("./banner.jpg");
-const embed = new EmbedBuilder().setTitle("🎫 نظام التكتات الاحترافي | Jaber Pasha").setDescription("**🔥 أهلاً بك في نظام الدعم الفني الرسمي 🔥**\\n\\n**⚡ لفتح تذكرة جديدة اختر الفئة المناسبة من القائمة**\\n\\n**📜 قوانين التذاكر:**\\n**1-** يُمنع فتح تذاكر عشوائية أو للمزاح\\n**2-** اشرح طلبك بالتفصيل بعد فتح التذكرة\\n**3-** ممنوع منشن الإدارة بدون سبب\\n**4-** انتظر رد فريق الدعم ولا تكرر المنشن\\n\\n**⏰ مدة الرد: 1 - 24 ساعة**\\n**🎯 نخدمكم بكل احترافية**").setColor(0xFF0000).setImage("attachment://banner.jpg").setThumbnail(interaction.guild.iconURL()).setFooter({text:"Jaber Pasha Support • نظام تكتات متطور",iconURL:interaction.guild.iconURL()}).setTimestamp();
-const menu = new StringSelectMenuBuilder().setCustomId("ticket_menu").setPlaceholder("🛒 اضغط هنا لاختيار نوع التذكرة").addOptions([{label:"طلب بنرات احترافية",value:"banners",emoji:"🔴",description:"بنرات سيرفرات، شخصية، يوتيوب"},{label:"طلب استيكر مميز",value:"sticker",emoji:"⚫",description:"استيكرات ديسكورد ثابتة ومتحركة"},{label:"الدعم الفني",value:"support",emoji:"🔵",description:"حل مشاكل واستفسارات"}]);
-const row = new ActionRowBuilder().addComponents(menu);
-await interaction.reply({embeds:[embed],components:[row],files:});
-}
-if (interaction.isStringSelectMenu() && interaction.customId === "ticket_menu") {
-const type = interaction.values[0];
-const modal = new ModalBuilder().setCustomId(`ticket_form_${type}`).setTitle("📝 املأ بيانات التذكرة كاملة");
-const name = new TextInputBuilder().setCustomId("name").setLabel("اسمك الكامل").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(50);
-const age = new TextInputBuilder().setCustomId("age").setLabel("عمرك").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(3);
-let detail;
-if (type === "banners") detail = new TextInputBuilder().setCustomId("detail").setLabel("البنر الذي تريده").setStyle(TextInputStyle.Paragraph).setRequired(true).setPlaceholder("مثال: بنر سيرفر قيمنق لون أحمر وأسود...");
-if (type === "sticker") detail = new TextInputBuilder().setCustomId("detail").setLabel("الاستيكر الذي تريده").setStyle(TextInputStyle.Paragraph).setRequired(true).setPlaceholder("مثال: استيكر متحرك يكتب اسمي...");
-if (type === "support") detail = new TextInputBuilder().setCustomId("detail").setLabel("ما هي مشكلتك؟").setStyle(TextInputStyle.Paragraph).setRequired(true).setPlaceholder("اشرح مشكلتك بالتفصيل...");
-modal.addComponents(new ActionRowBuilder().addComponents(name),new ActionRowBuilder().addComponents(age),new ActionRowBuilder().addComponents(detail));
-await interaction.showModal(modal);
-}
-if (interaction.isModalSubmit() && interaction.customId.startsWith("ticket_form_")) {
-const type = interaction.customId.split("_")[2];
-const name = interaction.fields.getTextInputValue("name");
-const age = interaction.fields.getTextInputValue("age");
-const detail = interaction.fields.getTextInputValue("detail");
-const typeName = {banners:"بنرات",sticker:"استيكر",support:"دعم-فني"}[type];
-const emoji = {banners:"🔴",sticker:"⚫",support:"🔵"}[type];
-const detailTitle = {banners:"تفاصيل البنر",sticker:"تفاصيل الاستيكر",support:"تفاصيل المشكلة"}[type];
-const channel = await interaction.guild.channels.create({name:`${emoji}${typeName}-${interaction.user.username}`,type:ChannelType.GuildText,permissionOverwrites:[{id:interaction.guild.id,deny:[PermissionsBitField.Flags.ViewChannel]},{id:interaction.user.id,allow:[PermissionsBitField.Flags.ViewChannel,PermissionsBitField.Flags.SendMessages]}]});
-tickets.set(channel.id,{userId:interaction.user.id,userName:name,userAge:age,detail:detail,type:typeName,emoji:emoji,claimed:false,claimer:null,claimerTag:null,createdAt:Date.now(),ratingSent:false});
-const embed = new EmbedBuilder().setTitle(`${emoji} تذكرة ${typeName} | معلومات العميل`).setColor(0xFF0000).setThumbnail(interaction.user.displayAvatarURL({dynamic:true})).addFields({name:"👤 اسم العميل",value:`\`\`\`${name}\`\`\``,inline:true},{name:"🎂 العمر",value:`\`\`\`${age} سنة\`\`\``,inline:true},{name:"📝 نوع التذكرة",value:`\`\`\`${typeName}\`\`\``,inline:true},{name:`📋 ${detailTitle}`,value:`\`\`\`${detail}\`\`\``,inline:false},{name:"📊 الحالة",value:"```لم يتم الاستلام ⏳```",inline:true},{name:"🙋‍♂️ المستلم",value:"```لا يوجد```",inline:true}).setFooter({text:`فتحها: ${interaction.user.tag} • ID: ${interaction.user.id}`,iconURL:interaction.user.displayAvatarURL()}).setTimestamp();
-const btn1 = new ButtonBuilder().setCustomId("claim").setLabel("استلام التذكرة").setStyle(ButtonStyle.Success).setEmoji("🙋‍♂️");
-const btn2 = new ButtonBuilder().setCustomId("archive").setLabel("تسجيل التذكرة").setStyle(ButtonStyle.Danger).setEmoji("🗂️");
-const row = new ActionRowBuilder().addComponents(btn1,btn2);
-await channel.send({content:`مرحباً ${interaction.user}`,embeds:[embed],components:[row]});
-await interaction.reply({content:`✅ تم فتح تذكرتك بنجاح ${channel}`,ephemeral:true});
-const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
-if (logChannel) {
-const logEmbed = new EmbedBuilder().setTitle("📥 تم فتح تذكرة جديدة").setColor(0x00FF00).addFields({name:"العميل",value:`${interaction.user}`,inline:true},{name:"النوع",value:typeName,inline:true},{name:"التذكرة",value:`${channel}`,inline:true}).setTimestamp();
-logChannel.send({embeds:[logEmbed]}).catch(()=>{});
-}
-}
-if (interaction.isButton()) {
-if (!interaction.channel) return;
-const ticket = tickets.get(interaction.channel.id);
-if (!ticket &&!interaction.customId.startsWith("rate_")) return;
-if (interaction.customId === "claim") {
-if (ticket.claimed) return interaction.reply({content:"⚠️ التذكرة مستلمة بالفعل",ephemeral:true});
-ticket.claimed = true;
-ticket.claimer = interaction.user.id;
-ticket.claimerTag = interaction.user.tag;
-const msg = await interaction.channel.messages.fetch({limit:10});
-const embedMsg = msg.find(m=>m.embeds.length>0);
-if (embedMsg) {
-const oldEmbed = embedMsg.embeds[0];
-const newEmbed = EmbedBuilder.from(oldEmbed).spliceFields(4,2,{name:"📊 الحالة",value:"```تم الاستلام ✅```",inline:true},{name:"🙋‍♂️ المستلم",value:`\`\`\`${interaction.user.tag}\`\`\``,inline:true});
-await embedMsg.edit({embeds:[newEmbed]});
-}
-await interaction.reply({content:`✅ تم استلام التذكرة بواسطة ${interaction.user}`});
-const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
-if (logChannel) {
-const logEmbed = new EmbedBuilder().setTitle("تم استلام تذكرة 🙋‍♂️").setColor(0xFFAA00).addFields({name:"التذكرة",value:`${interaction.channel}`,inline:false},{name:"المستلم",value:`${interaction.user}`,inline:false},{name:"العميل",value:`<@${ticket.userId}>`,inline:false}).setTimestamp();
-logChannel.send({embeds:[logEmbed]}).catch(()=>{});
-}
-}
-if (interaction.customId === "archive") {
-if (ticket.ratingSent) return interaction.reply({content:"⚠️ تم إرسال التقييم مسبقاً",ephemeral:true});
-ticket.ratingSent = true;
-await interaction.reply({content:"🗂️ **تم تسجيل التذكرة - الرجاء تقييم الخدمة**"});
-const ratingEmbed = new EmbedBuilder().setTitle("⭐ قيّم تجربتك مع الدعم الفني").setDescription("**شكراً لاستخدامك نظام التكتات**\\n\\n**كيف كانت تجربتك معنا؟**\\nاختر تقييمك من الأزرار بالأسفل\\n**⚠️ سيتم مسح التذكرة تلقائياً بعد 5 ثواني من التقييم**").setColor(0xFF0000).setThumbnail(interaction.guild.iconURL()).setFooter({text:"رأيك يهمنا لتطوير الخدمة"});
-const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`rate_5_${ticket.userId}_${ticket.claimer||"none"}_${interaction.channel.id}`).setLabel("ممتاز").setStyle(ButtonStyle.Success).setEmoji("⭐"),new ButtonBuilder().setCustomId(`rate_4_${ticket.userId}_${ticket.claimer||"none"}_${interaction.channel.id}`).setLabel("جيد جداً").setStyle(ButtonStyle.Primary).setEmoji("🌟"),new ButtonBuilder().setCustomId(`rate_3_${ticket.userId}_${ticket.claimer||"none"}_${interaction.channel.id}`).setLabel("جيد").setStyle(ButtonStyle.Primary).setEmoji("✨"),new ButtonBuilder().setCustomId(`rate_2_${ticket.userId}_${ticket.claimer||"none"}_${interaction.channel.id}`).setLabel("مقبول").setStyle(ButtonStyle.Secondary).setEmoji("💫"),new ButtonBuilder().setCustomId(`rate_1_${ticket.userId}_${ticket.claimer||"none"}_${interaction.channel.id}`).setLabel("سيء").setStyle(ButtonStyle.Danger).setEmoji("❌"));
-await interaction.channel.send({content:`<@${ticket.userId}>`,embeds:[ratingEmbed],components:[row]});
-}
-if (interaction.customId.startsWith("rate_")) {
-const[,stars,userId,claimerId,channelId]=interaction.customId.split("_");
-const starsText={"5":"⭐⭐⭐⭐⭐ ممتاز","4":"⭐⭐⭐⭐ جيد جداً","3":"⭐⭐⭐ جيد","2":"⭐⭐ مقبول","1":"⭐ سيء"}[stars];
-const ticket=tickets.get(channelId);
-if(!ticket)return;
-await interaction.update({content:`✅ **شكراً لتقييمك: ${starsText}**\\n🗂️ جاري حفظ التذكرة ومسحها خلال 5 ثواني...`,embeds:[],components:[]});
-const messages=await interaction.channel.messages.fetch({limit:100});
-let transcript=`════════════════════════════════════════\\n سجل محادثة التذكرة - Jaber Pasha\\n════════════════════════════════════════\\n\\nاسم التذكرة: ${interaction.channel.name}\\nنوع التذكرة: ${ticket.type}\\nالعميل: ${ticket.userName} (${userId})\\nالمستلم: ${ticket.claimerTag||"لا يوجد"}\\nالتقييم: ${starsText}\\nمدة التذكرة: ${Math.floor((Date.now()-ticket.createdAt)/1000/60)} دقيقة\\nتاريخ الإنشاء: ${new Date(ticket.createdAt).toLocaleString("ar-EG")}\\n\\n════════════════════════════════════════\\n المحادثة\\n════════════════════════════════════════\\n\\n`;
-messages.reverse().forEach(msg=>{if(!msg.author.bot||msg.embeds.length>0){const time=new Date(msg.createdTimestamp).toLocaleTimeString("ar-EG");transcript+=`[${time}] ${msg.author.tag}:\\n`;if(msg.content)transcript+=`${msg.content}\\n`;if(msg.embeds.length>0){msg.embeds.forEach(e=>{if(e.title)transcript+=` 📌 ${e.title}\\n`;if(e.description)transcript+=` ${e.description}\\n`;e.fields?.forEach(f=>transcript+=` • ${f.name}: ${f.value}\\n`);});}transcript+=`\\n`;}});
-transcript+=`\\n════════════════════════════════════════\\n نهاية السجل\\n════════════════════════════════════════`;
-const logChannel=interaction.client.channels.cache.get(LOG_CHANNEL_ID);
-if(logChannel){
-const duration=Math.floor((Date.now()-ticket.createdAt)/1000/60);
-const logEmbed=new EmbedBuilder().setTitle("تقييم + تسجيل تذكرة ⭐").setColor(stars>=4?0x00FF00:stars>=3?0xFFAA00:0xFF0000).addFields({name:"العميل",value:`<@${userId}>`,inline:false},{name:"التقييم",value:starsText,inline:false},{name:"المستلم",value:claimerId!=="none"?`<@${claimerId}>`:"لا يوجد",inline:false},{name:"مدة التذكرة",value:`${duration} دقيقة`,inline:false},{name:"التذكرة",value:`${ticket.emoji}${ticket.type}-jaber_pasha`,inline:false}).setFooter({text:"Jaber Pasha Support System"}).setTimestamp();
-await logChannel.send({embeds:[logEmbed]}).catch(()=>{});
-const transcriptFile=new AttachmentBuilder(Buffer.from("\uFEFF" + transcript,"utf-8"),{name:`transcript-${interaction.channel.name}.txt`});
-await logChannel.send({files:[transcriptFile]}).catch(()=>{});
-}
-setTimeout(()=>{interaction.channel.delete().catch(()=>{});tickets.delete(channelId);},5000);
-}
-}
-} catch (err) {
-console.log("Error:", err.message);
-}
+// خزن التذاكر المفتوحة عشان التقييم
+const openTickets = new Map();
+
+client.once('ready', () => {
+    console.log(`Bot Ready - نظام التذاكر الاحترافي شغال`);
+    console.log(`Logged in as ${client.user.tag}`);
+});
+
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+
+    // أمر تشغيل بانل التذاكر - للأدمن فقط
+    if (message.content === '!setup') {
+        if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return message.reply('الأمر ده للأدمن فقط');
+        }
+
+        const panelEmbed = new EmbedBuilder()
+        .setTitle('🎫 نظام فتح التذاكر الاحترافي')
+        .setDescription('اختر نوع التذكرة المناسبة لك\n\n**⚠️ يجب ملء بياناتك كاملة قبل فتح أي تذكرة**')
+        .setColor(0x2B2D31)
+        .setFooter({ text: 'سيتم تسجيل كل التذاكر + تقييم الخدمة بعد الإغلاق' });
+
+        const row = new ActionRowBuilder()
+        .addComponents(
+                new ButtonBuilder()
+                .setCustomId('banner_ticket')
+                .setLabel('طلب بنر')
+                .setStyle(ButtonStyle.Danger) // أحمر لامع
+                .setEmoji('🖼️'),
+                new ButtonBuilder()
+                .setCustomId('sticker_ticket')
+                .setLabel('طلب استيكر')
+                .setStyle(ButtonStyle.Secondary) // أسود لامع
+                .setEmoji('✨'),
+                new ButtonBuilder()
+                .setCustomId('support_ticket')
+                .setLabel('الدعم الفني')
+                .setStyle(ButtonStyle.Primary) // أزرق لامع
+                .setEmoji('🛠️')
+            );
+
+        await message.channel.send({ embeds: [panelEmbed], components: [row] });
+        await message.delete();
+    }
+});
+
+client.on('interactionCreate', async (interaction) => {
+    // 1. لما يدوس على زرار فتح تذكرة
+    if (interaction.isButton() && ['banner_ticket', 'sticker_ticket', 'support_ticket'].includes(interaction.customId)) {
+        let modalTitle = '';
+        if (interaction.customId === 'banner_ticket') modalTitle = 'طلب بنر - معلوماتك';
+        if (interaction.customId === 'sticker_ticket') modalTitle = 'طلب استيكر - معلوماتك';
+        if (interaction.customId === 'support_ticket') modalTitle = 'الدعم الفني - معلوماتك';
+
+        const modal = new ModalBuilder()
+        .setCustomId(`ticket_form_${interaction.customId}`)
+        .setTitle(modalTitle);
+
+        const nameInput = new TextInputBuilder()
+        .setCustomId('user_name')
+        .setLabel('اسمك الحقيقي')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+        const reasonInput = new TextInputBuilder()
+        .setCustomId('user_reason')
+        .setLabel('سبب فتح التذكرة / تفاصيل الطلب')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
+
+        const contactInput = new TextInputBuilder()
+        .setCustomId('user_contact')
+        .setLabel('وسيلة تواصل أخرى - اختياري')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false);
+
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(nameInput),
+            new ActionRowBuilder().addComponents(reasonInput),
+            new ActionRowBuilder().addComponents(contactInput)
+        );
+
+        await interaction.showModal(modal);
+        console.log(`[TICKET-LOG] ${interaction.user.tag} بدأ يملأ فورم ${interaction.customId}`);
+    }
+
+    // 2. لما يرسل الفورم ويتفتح التذكرة
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('ticket_form_')) {
+        const categoryType = interaction.customId.replace('ticket_form_', '');
+        let categoryName = '', categoryColor = 0x000000;
+
+        if (categoryType === 'banner_ticket') {
+            categoryName = 'طلب بنر'; categoryColor = 0xFF0000;
+        } else if (categoryType === 'sticker_ticket') {
+            categoryName = 'طلب استيكر'; categoryColor = 0x000000;
+        } else if (categoryType === 'support_ticket') {
+            categoryName = 'الدعم الفني'; categoryColor = 0x0099FF;
+        }
+
+        const userName = interaction.fields.getTextInputValue('user_name');
+        const userReason = interaction.fields.getTextInputValue('user_reason');
+        const userContact = interaction.fields.getTextInputValue('user_contact') || 'لا يوجد';
+
+        await interaction.deferReply({ ephemeral: true });
+
+        const ticketChannel = await interaction.guild.channels.create({
+            name: `ticket-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            permissionOverwrites: [
+                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+            ],
+        });
+
+        // خزن بيانات التذكرة عشان التقييم بعدين
+        openTickets.set(ticketChannel.id, {
+            ownerId: interaction.user.id,
+            category: categoryName,
+            claimedBy: null
+        });
+
+        const ticketEmbed = new EmbedBuilder()
+        .setTitle(`🎫 تذكرة جديدة - ${categoryName}`)
+        .setColor(categoryColor)
+        .addFields(
+                { name: 'صاحب التذكرة', value: `${interaction.user}`, inline: true },
+                { name: 'الاسم', value: userName, inline: true },
+                { name: 'الحالة', value: 'بانتظار الاستلام 🟡', inline: true },
+                { name: 'وسيلة التواصل', value: userContact },
+                { name: 'تفاصيل الطلب', value: userReason }
+            )
+        .setFooter({ text: `Ticket ID: ${ticketChannel.id}` })
+        .setTimestamp();
+
+        const ticketButtons = new ActionRowBuilder()
+        .addComponents(
+                new ButtonBuilder()
+                .setCustomId('claim_ticket')
+                .setLabel('استلام التذكرة')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('🖐️'),
+                new ButtonBuilder()
+                .setCustomId('close_ticket')
+                .setLabel('إغلاق التذكرة')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🔒')
+            );
+
+        await ticketChannel.send({
+            content: `@everyone ${interaction.user} فتح تذكرة جديدة`,
+            embeds: [ticketEmbed],
+            components: [ticketButtons]
+        });
+
+        await interaction.editReply({ content: `تم فتح تذكرتك ${ticketChannel} ✅` });
+        console.log(`[TICKET-LOG] تذكرة جديدة: ${categoryName} | صاحبها: ${interaction.user.tag} | ID: ${ticketChannel.id}`);
+    }
+
+    // 3. زر استلام التذكرة
+    if (interaction.isButton() && interaction.customId === 'claim_ticket') {
+        const ticketData = openTickets.get(interaction.channel.id);
+        if (!ticketData) return interaction.reply({ content: 'التذكرة دي مش متسجلة', ephemeral: true });
+        if (ticketData.claimedBy) return interaction.reply({ content: `التذكرة مستلمة بالفعل من <@${ticketData.claimedBy}>`, ephemeral: true });
+
+        ticketData.claimedBy = interaction.user.id;
+        openTickets.set(interaction.channel.id, ticketData);
+
+        const claimEmbed = new EmbedBuilder()
+        .setDescription(`✅ تم استلام التذكرة بواسطة ${interaction.user}`)
+        .setColor(0x00FF00);
+
+        await interaction.reply({ embeds: [claimEmbed] });
+        console.log(`[TICKET-LOG] تذكرة ${interaction.channel.name} تم استلامها بواسطة ${interaction.user.tag}`);
+    }
+
+    // 4. زر إغلاق التذكرة + التقييم الاحترافي
+    if (interaction.isButton() && interaction.customId === 'close_ticket') {
+        const ticketData = openTickets.get(interaction.channel.id);
+        if (!ticketData) return interaction.reply({ content: 'التذكرة دي مش متسجلة', ephemeral: true });
+
+        await interaction.reply('جاري إغلاق التذكرة وإرسال التقييم...');
+        console.log(`[TICKET-LOG] تذكرة ${interaction.channel.name} تم إغلاقها بواسطة ${interaction.user.tag}`);
+
+        // إرسال تقييم لصاحب التذكرة في الخاص
+        try {
+            const owner = await client.users.fetch(ticketData.ownerId);
+            const ratingEmbed = new EmbedBuilder()
+            .setTitle('📊 تقييم خدمة التذاكر')
+            .setDescription(`تم إغلاق تذكرتك الخاصة بـ **${ticketData.category}**\n\nنتمنى تقييم تجربتك معنا:`)
+            .setColor(0xFFD700);
+
+            const ratingRow = new ActionRowBuilder()
+            .addComponents(
+                    new ButtonBuilder().setCustomId('rate_5').setLabel('⭐⭐⭐⭐⭐ ممتاز').setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId('rate_4').setLabel('⭐⭐⭐⭐ جيد جداً').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('rate_3').setLabel('⭐⭐⭐ جيد').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('rate_2').setLabel('⭐⭐ مقبول').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId('rate_1').setLabel('⭐ سيء').setStyle(ButtonStyle.Danger),
+                );
+
+            await owner.send({ embeds: [ratingEmbed], components: [ratingRow] });
+        } catch (err) {
+            console.log(`[TICKET-LOG] مقدرتش أبعت تقييم لـ ${ticketData.ownerId} - قافل الخاص`);
+        }
+
+        openTickets.delete(interaction.channel.id);
+        setTimeout(() => interaction.channel.delete(), 5000);
+    }
+
+    // 5. أزرار التقييم
+    if (interaction.isButton() && interaction.customId.startsWith('rate_')) {
+        const rating = interaction.customId.replace('rate_', '');
+        await interaction.reply({ content: `شكراً لتقييمك **${rating} نجوم** ⭐\nرأيك يهمنا لتحسين الخدمة`, ephemeral: true });
+        console.log(`[TICKET-LOG] المستخدم ${interaction.user.tag} قيم الخدمة بـ ${rating} نجوم`);
+    }
 });
 
 client.login(process.env.TOKEN);
