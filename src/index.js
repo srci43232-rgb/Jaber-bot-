@@ -45,13 +45,31 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ content: '❌ معندكش صلاحية', ephemeral: true });
         }
 
-        const embed = new EmbedBuilder()
-           .setTitle('🔥 نظام التذاكر الاحترافي')
-           .setDescription('> **مرحباً بك في مركز الدعم الفخم**\n> يرجى اختيار نوع التذكرة المناسبة لك من الأزرار بالأسفل\n\n> **⚠️ ملاحظة مهمة:**\n> سيُطلب منك ملء بياناتك قبل فتح التذكرة لضمان خدمة أسرع وأدق')
-           .setColor('#FF0000')
-           .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
-           .setFooter({ text: 'اختر الفئة المناسبة لك', iconURL: client.user.displayAvatarURL() })
-           .setTimestamp();
+const embed = new EmbedBuilder()
+ .setTitle("👑│نظام التذاكر الأسطوري│👑")
+ .setDescription(`
+> **```أهلاً بك في إمبراطورية الدعم الفني```** ✨
+> 
+> **▬▬▬**
+> 
+> **⚡ اختر خدمتك من الأزرار بالأسفل وسيتم فتح تذكرة خاصة بك فوراً**
+> 
+> **🎨 طلب بنر** ⇢ تصميم بنرات احترافية بمقاسات مخصصة
+> **✨ طلب استيكر** ⇢ ستكرات ديسكورد فخمة بستايلك
+> **🛠️ الدعم الفني** ⇢ حل جميع مشاكلك التقنية
+> 
+> **▬▬▬**
+> 
+> **⚠️ مهم جداً:** بعد اختيار الخدمة هتملى بياناتك في نموذج سري
+> عشان نقدر نخدمك بأسرع وقت وبأعلى جودة ممكنة
+ `)
+ .setColor("#FFD700")
+ .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 1024 }))
+ .setFooter({ 
+    text: `⚡ ${interaction.guild.name} │ اختر خدمتك الآن`, 
+    iconURL: client.user.displayAvatarURL() 
+ })
+ .setTimestamp();
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
