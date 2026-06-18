@@ -11,9 +11,10 @@
     "express": "^4.18.2",
     "body-parser": "^1.20.2",
     "dotenv": "^16.3.1",
-    "discord-html-transcripts": "^3.2.3"
+    "discord-html-transcripts": "^3.2.3",
+    "undici": "^6.19.8"
   },
   "engines": {
-    "node": ">=16.9.0"
+    "node": "18.x"
   }
 }
