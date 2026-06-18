@@ -1,12 +1,15 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ChannelType, PermissionsBitField, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder } = require("discord.js");
-require("dotenv").config();
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ChannelType, PermissionsBitField, ModalBuilder, TextInputStyle, AttachmentBuilder } = require("discord.js");
+
 const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
+
 const tickets = new Map();
 const LOG_CHANNEL_ID = "1511144814089994372";
+
 client.once("clientReady", () => {
 console.log("Bot Ready - FINAL 100%");
 console.log(`Logged in as ${client.user.tag}`);
 });
+
 client.on("interactionCreate", async interaction => {
 try {
 if (!interaction.guild) return;
@@ -15,7 +18,7 @@ const file = new AttachmentBuilder("./banner.jpg");
 const embed = new EmbedBuilder().setTitle("🎫 نظام التكتات الاحترافي | Jaber Pasha").setDescription("**🔥 أهلاً بك في نظام الدعم الفني الرسمي 🔥**\\n\\n**⚡ لفتح تذكرة جديدة اختر الفئة المناسبة من القائمة**\\n\\n**📜 قوانين التذاكر:**\\n**1-** يُمنع فتح تذاكر عشوائية أو للمزاح\\n**2-** اشرح طلبك بالتفصيل بعد فتح التذكرة\\n**3-** ممنوع منشن الإدارة بدون سبب\\n**4-** انتظر رد فريق الدعم ولا تكرر المنشن\\n\\n**⏰ مدة الرد: 1 - 24 ساعة**\\n**🎯 نخدمكم بكل احترافية**").setColor(0xFF0000).setImage("attachment://banner.jpg").setThumbnail(interaction.guild.iconURL()).setFooter({text:"Jaber Pasha Support • نظام تكتات متطور",iconURL:interaction.guild.iconURL()}).setTimestamp();
 const menu = new StringSelectMenuBuilder().setCustomId("ticket_menu").setPlaceholder("🛒 اضغط هنا لاختيار نوع التذكرة").addOptions([{label:"طلب بنرات احترافية",value:"banners",emoji:"🔴",description:"بنرات سيرفرات، شخصية، يوتيوب"},{label:"طلب استيكر مميز",value:"sticker",emoji:"⚫",description:"استيكرات ديسكورد ثابتة ومتحركة"},{label:"الدعم الفني",value:"support",emoji:"🔵",description:"حل مشاكل واستفسارات"}]);
 const row = new ActionRowBuilder().addComponents(menu);
-await interaction.reply({embeds:[embed],components:[row],files:[file]});
+await interaction.reply({embeds:[embed],components:[row],files:});
 }
 if (interaction.isStringSelectMenu() && interaction.customId === "ticket_menu") {
 const type = interaction.values[0];
@@ -107,4 +110,5 @@ setTimeout(()=>{interaction.channel.delete().catch(()=>{});tickets.delete(channe
 console.log("Error:", err.message);
 }
 });
-client.login(process.env.DISCORD_TOKEN);
+
+client.login(process.env.TOKEN);
