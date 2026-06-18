@@ -22,182 +22,186 @@ const client = new Client({
     ]
 });
 
-// --- إعدادات البوت (الايديهات التي قدمتها) ---
+// --- الإعدادات بالأرقام التي قدمتها ---
 const CONFIG = {
-    TOKEN: "TOKEN_HERE", // ضع توكن بوتك هنا
+    TOKEN: process.env.TOKEN, // لا تغير هذا! ضعه في ريلوي في الـ Variables
     SERVER_ID: "1267986207569350709",
     OWNER_ROLE: "1516441623662170172",
-    ADMIN_ROLE: "1517120729559203931",
-    SUPPORT_ROLE: "1516441626384269343", // الرتبة الاضافية
+    ADMIN_ROLES: ["1517120729559203931", "1516441626384269343"],
+    SUPPORT_ADMIN_ONLY: "1517120729559203931",
+    CLAIM_LOG: "1516441752716709970",
     LOGS_CHANNEL: "1516499096796664030",
     TRANSCRIPT_CHANNEL: "1516508105704214629",
-    CLAIM_LOG_CHANNEL: "1516441752716709970",
-    IMAGE_URL: "https://media.discordapp.net/attachments/1267986207569350709/jaber_pasha.png" // تأكد من صحة الرابط أو سيظهر افتراضي
+    PANEL_IMAGE: "https://media.discordapp.net/attachments/1267986207569350709/jaber_pasha.png" // تأكد من رفع الصورة بهذا الاسم
 };
 
 client.once('ready', () => {
-    console.log(`✅ ${client.user.tag} جاهز للعمل! نم مستريحاً يا بطل.`);
+    console.log(`✅ تم تشغيل البوت بنجاح: ${client.user.tag}`);
+    console.log(`🚀 جاهز لخدمة جابر باشا!`);
 });
 
-// أمر إنشاء بنل التذاكر (اكتب !setup في الشات)
+// أمر التسطيب (اكتب !setup في الشات)
 client.on('messageCreate', async (message) => {
-    if (message.content === '!setup' && message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        const embed = new EmbedBuilder()
-            .setTitle("💎 نظام تذاكر فخامة جابر باشا")
+    if (message.content === '!setup') {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
+
+        const mainEmbed = new EmbedBuilder()
+            .setTitle("🌹 نظام تذاكر فخامة جابر باشا")
             .setDescription(`
             **مرحباً بك في أرقى خدمات السيرفر**
             
-            نحن هنا لخدمتك، يرجى اختيار القسم المناسب من القائمة أدناه:
+            يرجى اختيار القسم المناسب لبدء المعاملة:
             
-            🔴 **قسم طلب البنرات**: للحصول على تصاميم بنرات احترافية.
-            ⚫ **قسم طلب الاستيكرات**: لطلب استيكرات خاصة وفريدة.
+            🔴 **قسم طلب البنرات**: تصاميم احترافية بأعلى جودة.
+            ⚫ **قسم طلب الاستيكرات**: استيكرات خاصة وفريدة.
             🔵 **قسم الدعم الفني**: للاستفسارات والمشاكل التقنية.
             
-            *ملاحظة: يجب كتابة بياناتك قبل فتح التذكرة.*
+            ⚠️ **تنبيه:** يمنع فتح تذكرة بدون سبب واضح.
             `)
             .setColor("#FF0000") // أحمر لامع
-            .setImage(CONFIG.IMAGE_URL)
-            .setFooter({ text: "Jaber Pasha System", iconURL: client.user.displayAvatarURL() });
+            .setImage(CONFIG.PANEL_IMAGE)
+            .setFooter({ text: "Jaber Pasha Management", iconURL: message.guild.iconURL() });
 
-        const menu = new ActionRowBuilder()
-            .addComponents(
-                new StringSelectMenuBuilder()
-                    .setCustomId('ticket_select')
-                    .setPlaceholder('اختر القسم الذي تحتاجه...')
-                    .addOptions([
-                        { label: 'طلب بنرات', value: 'banners', description: 'لطلب بنر باللون الأحمر اللامع', emoji: '🔴' },
-                        { label: 'طلب استيكر', value: 'stickers', description: 'لطلب استيكر باللون الأسود اللامع', emoji: '⚫' },
-                        { label: 'الدعم الفني', value: 'support', description: 'للتواصل مع الإدارة (أزرق لامع)', emoji: '🔵' },
-                    ]),
-            );
+        const menu = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('main_select')
+                .setPlaceholder('إضغط هنا لاختيار الفئة...')
+                .addOptions([
+                    { label: 'طلب بنرات', value: 'banners', emoji: '🔴', description: 'للحصول على بنر أحمر لامع' },
+                    { label: 'طلب استيكر', value: 'stickers', emoji: '⚫', description: 'للحصول على استيكر أسود لامع' },
+                    { label: 'الدعم الفني', value: 'support', emoji: '🔵', description: 'التواصل مع الإدارة مباشرة' },
+                ])
+        );
 
-        await message.channel.send({ embeds: [embed], components: [menu] });
+        await message.channel.send({ embeds: [mainEmbed], components: [menu] });
         message.delete();
     }
 });
 
-// التعامل مع التفاعلات
 client.on('interactionCreate', async (interaction) => {
-    
-    // 1. فتح المودال (الاستمارة) عند اختيار فئة
-    if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_select') {
-        const choice = interaction.values[0];
-        const modal = new ModalBuilder()
-            .setCustomId(`modal_${choice}`)
-            .setTitle('استمارة فتح التذكرة');
-
-        const inputName = new TextInputBuilder()
-            .setCustomId('user_info')
-            .setLabel("الاسم والبيانات المطلوبة")
+    // 1. نظام المودال (البيانات الإلزامية)
+    if (interaction.isStringSelectMenu() && interaction.customId === 'main_select') {
+        const type = interaction.values[0];
+        const modal = new ModalBuilder().setCustomId(`modal_${type}`).setTitle('إكمال البيانات الإلزامية');
+        
+        const infoInput = new TextInputBuilder()
+            .setCustomId('user_data')
+            .setLabel("اكتب معلوماتك وسبب الطلب")
             .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder("اكتب اسمك، وغرضك من التذكرة هنا...")
-            .setRequired(true);
+            .setMinLength(10)
+            .setRequired(true)
+            .setPlaceholder("مثال: اسمي كذا وطلبي هو كذا...");
 
-        modal.addComponents(new ActionRowBuilder().addComponents(inputName));
+        modal.addComponents(new ActionRowBuilder().addComponents(infoInput));
         await interaction.showModal(modal);
     }
 
-    // 2. معالجة بيانات المودال وإنشاء التذكرة
+    // 2. إنشاء التذكرة بعد كتابة البيانات
     if (interaction.isModalSubmit()) {
         await interaction.deferReply({ ephemeral: true });
         const type = interaction.customId.split('_')[1];
-        const info = interaction.fields.getTextInputValue('user_info');
+        const userData = interaction.fields.getTextInputValue('user_data');
         
-        let categoryName = "";
-        let embedColor = "";
-        let supportID = CONFIG.ADMIN_ROLE;
-
-        if (type === 'banners') { categoryName = "ticket-banner"; embedColor = "#FF0000"; }
-        else if (type === 'stickers') { categoryName = "ticket-sticker"; embedColor = "#1A1A1A"; }
-        else if (type === 'support') { categoryName = "ticket-support"; embedColor = "#0099FF"; }
+        let color, categoryName, supportID;
+        if (type === 'banners') { color = "#FF0000"; categoryName = "banner"; supportID = CONFIG.ADMIN_ROLES; }
+        else if (type === 'stickers') { color = "#1a1a1a"; categoryName = "sticker"; supportID = CONFIG.ADMIN_ROLES; }
+        else { color = "#0080FF"; categoryName = "support"; supportID = [CONFIG.SUPPORT_ADMIN_ONLY]; }
 
         const channel = await interaction.guild.channels.create({
             name: `${categoryName}-${interaction.user.username}`,
             type: ChannelType.GuildText,
             permissionOverwrites: [
                 { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-                { id: supportID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles] },
+                ...supportID.map(role => ({ id: role, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
             ],
         });
 
         const ticketEmbed = new EmbedBuilder()
-            .setTitle(`تذكرة جديدة - ${categoryName}`)
-            .setColor(embedColor)
-            .setDescription(`**صاحب التذكرة:** ${interaction.user}\n**البيانات:**\n${info}`)
+            .setTitle(`تذكرة جديدة: ${categoryName.toUpperCase()}`)
+            .setColor(color)
+            .addFields(
+                { name: "👤 صاحب التذكرة", value: `${interaction.user.tag}`, inline: true },
+                { name: "📄 البيانات المقدمة", value: `\`\`\`${userData}\`\`\`` }
+            )
             .setTimestamp();
 
-        const buttons = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('claim_ticket').setLabel('استلام التذكرة').setStyle(ButtonStyle.Success).setEmoji('✅'),
-            new ButtonBuilder().setCustomId('close_ticket').setLabel('إغلاق وتدوين').setStyle(ButtonStyle.Danger).setEmoji('🔒')
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('claim').setLabel('استلام التذكرة').setStyle(ButtonStyle.Success).setEmoji('✅'),
+            new ButtonBuilder().setCustomId('close').setLabel('إغلاق').setStyle(ButtonStyle.Danger).setEmoji('🔒')
         );
 
-        await channel.send({ content: `<@&${supportID}> | ${interaction.user}`, embeds: [ticketEmbed], components: [buttons] });
+        await channel.send({ content: `<@&${supportID[0]}>`, embeds: [ticketEmbed], components: [row] });
         await interaction.followUp({ content: `تم فتح تذكرتك بنجاح: ${channel}`, ephemeral: true });
     }
 
     // 3. زر الاستلام (Claim)
-    if (interaction.isButton() && interaction.customId === 'claim_ticket') {
-        if (!interaction.member.roles.cache.has(CONFIG.ADMIN_ROLE)) {
-            return interaction.reply({ content: "عذراً، هذا الزر للمسؤولين فقط.", ephemeral: true });
-        }
-        
-        await interaction.channel.permissionOverwrites.edit(CONFIG.ADMIN_ROLE, { SendMessages: true });
-        await interaction.channel.permissionOverwrites.edit(interaction.user.id, { SendMessages: true });
+    if (interaction.isButton() && interaction.customId === 'claim') {
+        const hasRole = CONFIG.ADMIN_ROLES.some(role => interaction.member.roles.cache.has(role));
+        if (!hasRole) return interaction.reply({ content: "هذا الزر للمسؤولين فقط!", ephemeral: true });
 
+        await interaction.channel.permissionOverwrites.edit(interaction.user.id, { SendMessages: true });
+        
         const claimEmbed = new EmbedBuilder()
-            .setColor("#00FF00")
-            .setDescription(`✅ تم استلام التذكرة بواسطة: ${interaction.user}`);
-        
+            .setDescription(`✅ تم استلام التذكرة بواسطة ${interaction.user}`)
+            .setColor("#00FF00");
+
         await interaction.reply({ embeds: [claimEmbed] });
-        
-        // لوج الاستلام
-        const logChan = client.channels.cache.get(CONFIG.CLAIM_LOG_CHANNEL);
-        if (logChan) logChan.send({ content: `الاداري ${interaction.user.tag} استلم تذكرة ${interaction.channel.name}` });
+
+        // لوج استلام التذكرة
+        const claimLog = client.channels.cache.get(CONFIG.CLAIM_LOG);
+        if (claimLog) {
+            const logEmbed = new EmbedBuilder()
+                .setTitle("📝 استلام تذكرة")
+                .addFields(
+                    { name: "الإداري", value: `${interaction.user.tag}`, inline: true },
+                    { name: "التذكرة", value: `${interaction.channel.name}`, inline: true }
+                )
+                .setColor("#00FF00").setTimestamp();
+            claimLog.send({ embeds: [logEmbed] });
+        }
     }
 
-    // 4. زر الإغلاق والتقييم
-    if (interaction.isButton() && interaction.customId === 'close_ticket') {
-        const ratingMenu = new ActionRowBuilder().addComponents(
+    // 4. نظام الإغلاق والتقييم
+    if (interaction.isButton() && interaction.customId === 'close') {
+        const rateMenu = new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
-                .setCustomId('rate_ticket')
-                .setPlaceholder('قيم الخدمة قبل الإغلاق...')
+                .setCustomId('rate_action')
+                .setPlaceholder('قيم مستوى الخدمة قبل الإغلاق...')
                 .addOptions([
-                    { label: '⭐⭐⭐⭐⭐ ممتاز', value: '5' },
-                    { label: '⭐⭐⭐⭐ جيد جداً', value: '4' },
-                    { label: '⭐⭐⭐ متوسط', value: '3' },
-                    { label: '⭐ سيء', value: '1' },
+                    { label: 'ممتاز ⭐⭐⭐⭐⭐', value: '5' },
+                    { label: 'جيد جداً ⭐⭐⭐⭐', value: '4' },
+                    { label: 'متوسط ⭐⭐⭐', value: '3' },
+                    { label: 'سيء ⭐', value: '1' },
                 ])
         );
-        await interaction.reply({ content: "يرجى تقييم الخدمة لإتمام عملية الإغلاق:", components: [ratingMenu] });
+        await interaction.reply({ content: "يرجى تقييمنا لإغلاق التذكرة:", components: [rateMenu] });
     }
 
-    // 5. معالجة التقييم واللوجز النهائي
-    if (interaction.isStringSelectMenu() && interaction.customId === 'rate_ticket') {
+    // 5. التقييم النهائي واللوجز
+    if (interaction.isStringSelectMenu() && interaction.customId === 'rate_action') {
         const rating = interaction.values[0];
-        await interaction.reply("جاري حفظ البيانات وإغلاق التذكرة...");
+        await interaction.update({ content: "جاري حفظ النسخة وإغلاق القناة...", components: [] });
 
         const messages = await interaction.channel.messages.fetch({ limit: 100 });
-        let logContent = messages.map(m => `${m.author.tag}: ${m.content}`).reverse().join('\n');
+        const transcript = messages.map(m => `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}`).reverse().join('\n');
 
-        const transcriptEmbed = new EmbedBuilder()
-            .setTitle("نسخة التذكرة (Transcript)")
-            .addFields(
-                { name: "صاحب التذكرة", value: interaction.channel.name, inline: true },
-                { name: "التقييم", value: `${rating} نجوم`, inline: true },
-                { name: "أغلق بواسطة", value: interaction.user.tag, inline: true }
-            )
+        const finalEmbed = new EmbedBuilder()
+            .setTitle("📁 أرشفة تذكرة - جابر باشا")
             .setColor("#FF0000")
-            .setTimestamp();
+            .addFields(
+                { name: "اسم التذكرة", value: interaction.channel.name, inline: true },
+                { name: "التقييم", value: `${rating}/5 ⭐`, inline: true },
+                { name: "أغلق بواسطة", value: interaction.user.tag, inline: true }
+            ).setTimestamp();
 
-        // إرسال للوجز والنسخ
-        const transcriptChan = client.channels.cache.get(CONFIG.TRANSCRIPT_CHANNEL);
+        const transChan = client.channels.cache.get(CONFIG.TRANSCRIPT_CHANNEL);
         const logsChan = client.channels.cache.get(CONFIG.LOGS_CHANNEL);
 
-        if (transcriptChan) await transcriptChan.send({ embeds: [transcriptEmbed] });
-        if (logsChan) await logsChan.send({ content: `سجل المحادثة لـ ${interaction.channel.name}:\n\`\`\`${logContent.slice(0, 1900)}\`\`\`` });
+        if (transChan) await transChan.send({ embeds: [finalEmbed] });
+        if (logsChan) await logsChan.send({ content: `نسخة المحادثة لـ ${interaction.channel.name}:\n\`\`\`${transcript.slice(0, 1900)}\`\`\`` });
 
-        setTimeout(() => interaction.channel.delete(), 5000);
+        setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
     }
 });
 
