@@ -1,0 +1,20 @@
+{
+  "tickets": [
+    {
+      "channelId": "1517170440777367562",
+      "userId": "1344698073078829168",
+      "status": "closed",
+      "category": "support",
+      "formData": {
+        "problem": "لدي مشكله"
+      }
+    }
+  ],
+  "settings": {
+    "1505239166554869973": {
+      "categoryId": "1505251198708482178",
+      "logChannelId": "1505251265549041754",
+      "staffRole": "1507436260434776175"
+    }
+  }
+}
