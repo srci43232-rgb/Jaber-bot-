@@ -1,208 +1,273 @@
 const { 
-    Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, 
-    EmbedBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, 
-    TextInputStyle, PermissionsBitField, ChannelType, REST, Routes 
+    Client, 
+    GatewayIntentBits, 
+    ActionRowBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    EmbedBuilder, 
+    StringSelectMenuBuilder, 
+    ModalBuilder, 
+    TextInputBuilder, 
+    TextInputStyle, 
+    PermissionsBitField, 
+    ChannelType,
+    REST,
+    Routes 
 } = require('discord.js');
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildVoiceStates
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates,
     ]
 });
 
-// --- إعدادات السيادة الإدارية لـ Var Vat~ ---
-const CORE = {
-    TOKEN: process.env.TOKEN,
-    OWNER: "1516441623662170172",
-    ADMINS: ["1517120729559203931", "1516441626384269343"],
-    TECH_SUPPORT: "1517120729559203931",
+// --- قاعدة بيانات المنظومة الإدارية العليا ---
+const SUPREME_CORE = {
+    GUILD_ID: "1267986207569350709",
+    OWNER_ID: "1516441623662170172",
+    ADMIN_ROLES: ["1517120729559203931", "1516441626384269343"],
+    TECH_SUPPORT_ROLE: "1517120729559203931",
     CHANNELS: {
         CLAIM: "1516441752716709970",
-        LOGS: "1516499096796664030",
-        TRANSCRIPT: "1516508105704214629",
+        GENERAL: "1516499096796664030",
+        ARCHIVE: "1516508105704214629",
         WELCOME: "1514696892246786089"
     }
 };
 
-// فحص هل العضو إداري؟
-const isStaff = (member) => CORE.ADMINS.some(id => member.roles.cache.has(id)) || member.id === CORE.OWNER || member.permissions.has(PermissionsBitField.Flags.Administrator);
+// وظيفة فحص السلطة الإدارية
+const isAuthorized = (member) => {
+    return SUPREME_CORE.ADMIN_ROLES.some(id => member.roles.cache.has(id)) || 
+           member.id === SUPREME_CORE.OWNER_ID || 
+           member.permissions.has(PermissionsBitField.Flags.Administrator);
+};
 
 client.once('ready', async () => {
-    console.log(`[SYSTEM] 🛡️ البروتوكول الملكي متصل: ${client.user.tag}`);
-    const commands = [
-        { name: 'setup', description: 'تثبيت بنل منظومة Var Vat~ للخدمات' },
-        { name: 'clear', description: 'تطهير المحادثة', options: [{name:'amount', description:'عدد الرسائل', type:4, required:true}] }
-    ];
-    const rest = new REST({ version: '10' }).setToken(CORE.TOKEN);
-    try { await rest.put(Routes.applicationCommands(client.user.id), { body: commands }); } catch (e) { console.error(e); }
+    console.log(`[SYSTEM] 🛡️ المتصل الآن: ${client.user.tag}`);
+    
+    const commands = [{
+        name: 'setup',
+        description: 'تفعيل المنصة الإدارية الفاخرة لمركز خدمات Var Vat~'
+    }];
+
+    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+    try {
+        await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+        console.log('✅ تم تسجيل جميع الأوامر بنجاح بدون أخطاء');
+    } catch (e) { console.error('[ERROR]', e); }
 });
 
-// --- بنل التذاكر الفخم جداً ---
-async function sendLuxuryPanel(channel) {
-    const icon = channel.guild.iconURL({ size: 1024, dynamic: true });
-    const panel = new EmbedBuilder()
-        .setAuthor({ name: `Imperial Services | ${channel.guild.name}`, iconURL: icon })
-        .setTitle("♛ مـنـظـومـة الـنـخـبـة لـلـخـدمـات الـحـصـريـة ♛")
+// --- بروتوكول الترحيب الملكي ---
+client.on('guildMemberAdd', async (member) => {
+    const channel = member.guild.channels.cache.get(SUPREME_CORE.CHANNELS.WELCOME);
+    if (!channel) return;
+
+    const welcomeEmbed = new EmbedBuilder()
+        .setAuthor({ name: `سجل الانضمام الإداري`, iconURL: member.guild.iconURL() })
+        .setTitle(`◈ مـرحـبـاً بـك فـي عـالـم ${member.guild.name} ◈`)
         .setDescription(`
-        **« بـروتوكول الـتـعـامـلات الـرسـمية »**
-        
-        مرحباً بك في الوجهة الرسمية لطلب الخدمات. تم تصميم هذا النظام لضمان الدقة والسرعة تحت إشراف الإدارة العليا.
-        
-        ━━━━━━━━━━━━━━━━━━━━━━
-        **💠 بـوابـات الـخـدمـة الـرئيسية :**
-        
-        🔴 **بـوابـة الـبـنـرات الـفـاخـرة**
-        ⚫ **بـوابـة الاسـتـيـكـرات الـمـلكيـة**
-        🔵 **بـوابـة الـدعـم الـفـنـي الـمـبـاشـر**
-        ━━━━━━━━━━━━━━━━━━━━━━
-        
-        *⚠️ يـلـزم اسـتـيفاء الـبـيـانات فـي الـنـافـذة الـقـادمة لـتـفـعـيـل الـطلب.*
+        > **نستقبل اليوم عضواً جديداً في طليعة نخبتنا.**
+        > **نأمل لك رحلة مليئة بالإبداع والتميز.**
+
+        **┏━━━━━━━━━━━━━━━━━━━━━━┓**
+        **┃ 👤 الـمـنـضـم :** ${member}
+        **┃ 🆔 الـهـويـة :** \`${member.id}\`
+        **┃ 🔢 الـعـضـو رَقـم :** \`#${member.guild.memberCount}\`
+        **┗━━━━━━━━━━━━━━━━━━━━━━┛**
         `)
-        .setColor("#FF0000").setImage(icon).setThumbnail(icon)
-        .setFooter({ text: "Var Vat~ Security Protocol • 2026" });
+        .setColor("#FF0000")
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setImage(member.guild.iconURL({ size: 1024 }))
+        .setTimestamp();
 
-    const menu = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder().setCustomId('gate_select').setPlaceholder('🔱 إخـتـر بـوابـة الـخـدمـة...')
-            .addOptions([
-                { label: 'بوابة البنرات', value: 'banners', emoji: '🔴' },
-                { label: 'بوابة الاستيكرات', value: 'stickers', emoji: '⚫' },
-                { label: 'بوابة الدعم الفني', value: 'support', emoji: '🔵' },
-            ])
-    );
-    await channel.send({ embeds: [panel], components: [menu] });
-}
+    await channel.send({ content: `**أهلاً بك ${member}**`, embeds: [welcomeEmbed] });
+});
 
+// --- معالج التفاعلات المركزية ---
 client.on('interactionCreate', async (interaction) => {
     
-    // 1. أوامر السلاش
-    if (interaction.isChatInputCommand()) {
-        if (!isStaff(interaction.member)) return interaction.reply({ content: "❌ للإدارة فقط.", ephemeral: true });
-        if (interaction.commandName === 'setup') {
-            await sendLuxuryPanel(interaction.channel);
-            await interaction.reply({ content: "✅ تم التثبيت.", ephemeral: true });
-        }
-        if (interaction.commandName === 'clear') {
-            await interaction.channel.bulkDelete(interaction.options.getInteger('amount'));
-            await interaction.reply({ content: "✅ تم التنظيف.", ephemeral: true });
-        }
+    // 1. أمر الاستخراج /setup
+    if (interaction.isChatInputCommand() && interaction.commandName === 'setup') {
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
+
+        const serverIco = interaction.guild.iconURL({ size: 1024, dynamic: true });
+        
+        const mainPanel = new EmbedBuilder()
+            .setAuthor({ name: `Executive Management Center`, iconURL: serverIco })
+            .setTitle(`◈ مـركـز الـنـخـبـة لـلـخـدمـات الـحـصـريـة ◈`)
+            .setDescription(`
+            **« بـروتوكول الـتـعـامـلات الـرسـمية »**
+            
+            مرحباً بك في المنصة الموحدة لطلب الخدمات في **${interaction.guild.name}**. 
+            تم تصميم هذا النظام لضمان الدقة والسرعة في التنفيذ تحت إشراف الإدارة العليا.
+            
+            ━━━━━━━━━━━━━━━━━━━━━━
+            **💠 بـوابـات الـخـدمـة الـمـتـاحة :**
+            
+            🔴 **بـوابـة الـبـنـرات الـفـاخـرة**
+            *تـصـامـيـم احـتـرافـية بـمـعايـيـر عـالـمية.*
+
+            ⚫ **بـوابـة الاسـتـيـكـرات الـمـلكيـة**
+            *إضـافات فـريـدة تـنـبـض بـالإبـداع.*
+
+            🔵 **بـوابـة الـدعـم الـفـنـي الـمـبـاشـر**
+            *قـنـاة اتـصـال مـشـفـرة مـع الإدارة.*
+            ━━━━━━━━━━━━━━━━━━━━━━
+            
+            *⚠️ يـلـزم اسـتـيفاء الـبـيـانات فـي الـنـافـذة الـقـادمة لـتـفـعـيـل الـطلب.*
+            `)
+            .setColor("#FF0000")
+            .setImage(serverIco)
+            .setFooter({ text: `Security Protocol • 2026`, iconURL: serverIco });
+
+        const selector = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('gate_selector')
+                .setPlaceholder('🔱 إخـتـر بـوابـة الـخـدمـة لـلـمـتـابـعة...')
+                .addOptions([
+                    { label: 'بوابة البنرات', value: 'v_banners', emoji: '🔴' },
+                    { label: 'بوابة الاستيكرات', value: 'v_stickers', emoji: '⚫' },
+                    { label: 'بوابة الدعم الفني', value: 'v_support', emoji: '🔵' },
+                ])
+        );
+
+        await interaction.reply({ embeds: [mainPanel], components: [selector] });
     }
 
-    // 2. المودال (البيانات الإلزامية)
-    if (interaction.isStringSelectMenu() && interaction.customId === 'gate_select') {
-        const modal = new ModalBuilder().setCustomId(`mod_${interaction.values[0]}`).setTitle('🛡️ بـروتوكول تـحـقـيق الـبـيـانـات');
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('fn').setLabel("الاسـم الـرسـمـي").setStyle(TextInputStyle.Short).setRequired(true)),
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('fd').setLabel("تـفـاصـيـل الـطـلـب").setStyle(TextInputStyle.Paragraph).setRequired(true))
-        );
+    // 2. بروتوكول المودال
+    if (interaction.isStringSelectMenu() && interaction.customId === 'gate_selector') {
+        const gate = interaction.values[0];
+        const modal = new ModalBuilder().setCustomId(`modal_${gate}`).setTitle('🛡️ بـروتوكول تـحـقـيق الـبـيـانـات');
+        
+        const f1 = new TextInputBuilder().setCustomId('f_name').setLabel("الاسـم الـرسـمـي").setStyle(TextInputStyle.Short).setRequired(true);
+        const f2 = new TextInputBuilder().setCustomId('f_data').setLabel("تـفـاصـيـل الـطـلـب").setStyle(TextInputStyle.Paragraph).setRequired(true);
+
+        modal.addComponents(new ActionRowBuilder().addComponents(f1), new ActionRowBuilder().addComponents(f2));
         await interaction.showModal(modal);
     }
 
-    // 3. إنشاء التذكرة
-    if (interaction.isModalSubmit() && interaction.customId.startsWith('mod_')) {
-        await interaction.deferReply({ ephemeral: true });
-        const type = interaction.customId.split('_')[1];
-        const uName = interaction.fields.getTextInputValue('fn');
-        const uData = interaction.fields.getTextInputValue('fd');
-        
-        let s = { c: "#FF0000", l: "Banner", r: CORE.ADMINS, e: "🔴" };
-        if (type === 'stickers') s = { c: "#000000", l: "Sticker", r: CORE.ADMINS, e: "⚫" };
-        if (type === 'support') s = { c: "#0080FF", l: "Support", r: [CORE.TECH_SUPPORT], e: "🔵" };
+    // 3. إنشاء قناة التذكرة
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_')) {
+        try {
+            await interaction.deferReply({ ephemeral: true });
+            const gateType = interaction.customId.split('_')[1];
+            const name = interaction.fields.getTextInputValue('f_name');
+            const data = interaction.fields.getTextInputValue('f_data');
+            
+            let cfg = { color: "#FF0000", label: "Banner", staff: SUPREME_CORE.ADMIN_ROLES, e: "🔴" };
+            if (gateType === 'v_stickers') cfg = { color: "#000000", label: "Sticker", staff: SUPREME_CORE.ADMIN_ROLES, e: "⚫" };
+            if (gateType === 'v_support') cfg = { color: "#0080FF", label: "Technical", staff: [SUPREME_CORE.TECH_SUPPORT_ROLE], e: "🔵" };
 
-        const channel = await interaction.guild.channels.create({
-            name: `🔱-${s.l}-${interaction.user.username}`,
-            permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-                ...s.r.map(id => ({ id: id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
-            ],
-        });
+            const channel = await interaction.guild.channels.create({
+                name: `🔱-${cfg.label}-${interaction.user.username}`,
+                type: ChannelType.GuildText,
+                permissionOverwrites: [
+                    { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                    { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles] },
+                    ...cfg.staff.map(id => ({ id: id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
+                ],
+            });
 
-        const welcome = new EmbedBuilder()
-            .setTitle(`${s.e} مـذكـرة خـدمـة: ${s.l}`)
-            .setDescription(`مرحباً بك ${interaction.user}، طلبك قيد المعالجة الإدارية.`)
-            .addFields(
-                { name: "👤 الـعـمـيـل", value: `> ${interaction.user.tag}`, inline: true },
-                { name: "📝 الـاسـم", value: `> ${uName}`, inline: true },
-                { name: "📄 الـمـلـف", value: `\`\`\`text\n${uData}\n\`\`\`` }
-            )
-            .setColor(s.c).setThumbnail(interaction.user.displayAvatarURL()).setFooter({ text: `Creator ID: ${interaction.user.id}` });
+            const welcome = new EmbedBuilder()
+                .setTitle(`${cfg.e} مـذكـرة الـخـدمـة: ${cfg.label}`)
+                .setDescription(`مرحباً بك ${interaction.user}، تم تفعيل قناتك بنجاح. فريق الإدارة بانتظارك.`)
+                .addFields(
+                    { name: "👤 الـعمـيل", value: `> ${interaction.user.tag}`, inline: true },
+                    { name: "📝 الـاسم", value: `> ${name}`, inline: true },
+                    { name: "📄 الـمـلف الـمُـقـدم", value: `\`\`\`text\n${data}\n\`\`\`` }
+                )
+                .setColor(cfg.color).setThumbnail(interaction.user.displayAvatarURL()).setFooter({ text: `Creator ID: ${interaction.user.id}` });
 
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('c_btn').setLabel('تولي المهمة').setStyle(ButtonStyle.Success).setEmoji('✅'),
-            new ButtonBuilder().setCustomId('d_btn').setLabel('إنهاء الإجراء').setStyle(ButtonStyle.Danger).setEmoji('🔒')
-        );
+            const actionRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('claim_v8').setLabel('تولي المهمة').setStyle(ButtonStyle.Success).setEmoji('✅'),
+                new ButtonBuilder().setCustomId('close_v8').setLabel('إنهاء الإجراء').setStyle(ButtonStyle.Danger).setEmoji('🔒')
+            );
 
-        await channel.send({ content: `<@&${s.r[0]}>`, embeds: [welcome], components: [row] });
-        await interaction.followUp({ content: `✅ تم تفعيل بوابتك: ${channel}`, ephemeral: true });
+            await channel.send({ content: `<@&${cfg.staff[0]}>`, embeds: [welcome], components: [actionRow] });
+            await interaction.followUp({ content: `✅ تـم تـفـعـيـل الـقـنـاة: ${channel}`, ephemeral: true });
+        } catch (e) { console.error(e); }
     }
 
-    // 4. أزرار التحكم (إدارة فقط)
+    // 4. العمليات الإدارية (Buttons)
     if (interaction.isButton()) {
-        const staff = isStaff(interaction.member);
-
-        if (interaction.customId === 'c_btn') {
-            if (!staff) return interaction.reply({ content: "❌ للإدارة فقط.", ephemeral: true });
-            await interaction.reply({ content: `✅ تم الاستلام بواسطة: ${interaction.user}` });
-            const cl = client.channels.cache.get(CORE.CHANNELS.CLAIM);
-            if (cl) cl.send(`🎫 **تقرير:** الإداري **${interaction.user.tag}** استلم تذكرة **${interaction.channel.name}**`);
+        if (!isAuthorized(interaction.member)) {
+            return interaction.reply({ content: "❌ عذراً، لا تملك تصريحاً إدارياً لاستخدام هذا الزر.", ephemeral: true });
         }
 
-        if (interaction.customId === 'd_btn') {
-            if (!staff) return interaction.reply({ content: "❌ الإغلاق للإدارة فقط.", ephemeral: true });
-            
-            // جلب ايدي صاحب التذكرة من الامبيد
+        // --- تحديث: الاستلام داخل التذكرة فقط وبدون لوج خارجي ---
+        if (interaction.customId === 'claim_v8') {
+            const claimEmbed = new EmbedBuilder()
+                .setAuthor({ name: "تـحـديث بـروتوكول الـتـذكرة", iconURL: interaction.guild.iconURL() })
+                .setDescription(`
+                > **تـم تـولـي الـمـهـمة بـنجاح.**
+                > **تـذكرتـك الآن تـحـت إشـراف الـمـسـؤول الـمُـبـاشر.**
+                
+                **🛡️ الـمـسـؤول الـمُـكـلف:** ${interaction.user}
+                `)
+                .setColor("#00FF00")
+                .setTimestamp()
+                .setFooter({ text: "Luxury Management System", iconURL: interaction.user.displayAvatarURL() });
+
+            await interaction.reply({ embeds: [claimEmbed] });
+        }
+
+        if (interaction.customId === 'close_v8') {
             const embed = interaction.message.embeds[0];
             const ownerID = embed.footer.text.replace('Creator ID: ', '');
 
             const row = new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder().setCustomId(`rate_${ownerID}`).setPlaceholder('🌟 (للعضو فقط) قيم مستوى الخدمة...')
                     .addOptions([
-                        { label: 'ممتاز ⭐⭐⭐⭐⭐', value: '5', emoji: '👑' },
-                        { label: 'جيد ⭐⭐⭐', value: '3', emoji: '👍' },
-                        { label: 'ضعيف ⭐', value: '1', emoji: '👎' },
+                        { label: 'تقييم ملكي (5 نجوم)', value: '5', emoji: '⭐' },
+                        { label: 'تقييم جيد (3 نجوم)', value: '3', emoji: '⭐' },
+                        { label: 'تقييم غير مرضي (1 نجمة)', value: '1', emoji: '⭐' },
                     ])
             );
             await interaction.reply({ content: `📢 **بانتظار تقييم العضو <@${ownerID}> لإتمام الإغلاق...**`, components: [row] });
         }
 
-        if (interaction.customId === 'final_save') {
-            if (!staff) return interaction.reply({ content: "❌ الحفظ للإدارة فقط.", ephemeral: true });
+        if (interaction.customId === 'save_v8') {
             await interaction.reply("⏳ جاري تسجيل الأرشيف العمودي...");
+            const msgs = await interaction.channel.messages.fetch({ limit: 100 });
+            const transcript = msgs.filter(m => !m.author.bot)
+                .map(m => `┃ [${m.createdAt.toLocaleTimeString()}] ${m.author.tag} ➔ ${m.content}`)
+                .reverse().join('\n');
 
-            const messages = await interaction.channel.messages.fetch({ limit: 100 });
-            const transcript = messages.filter(m => !m.author.bot)
-                .map(m => `┃ [${m.createdAt.toLocaleTimeString()}] ${m.author.tag} ➔ ${m.content}`).reverse().join('\n');
+            const archEmbed = new EmbedBuilder().setTitle("📂 مـلـف أرشـيـف").setColor("#FF0000")
+                .addFields(
+                    { name: "التذكرة", value: interaction.channel.name, inline: true },
+                    { name: "بواسطة", value: interaction.user.tag, inline: true }
+                ).setTimestamp();
 
-            const archEmbed = new EmbedBuilder().setTitle("📂 أرشيف تذكرة نهائي").setColor("#FF0000")
-                .addFields({ name: "التذكرة", value: interaction.channel.name, inline: true }, { name: "بواسطة", value: interaction.user.tag, inline: true }).setTimestamp();
-
-            const aC = client.channels.cache.get(CORE.CHANNELS.TRANSCRIPT);
-            const gC = client.channels.cache.get(CORE.CHANNELS.LOGS);
+            const aC = client.channels.cache.get(SUPREME_CORE.CHANNELS.ARCHIVE);
+            const gC = client.channels.cache.get(SUPREME_CORE.CHANNELS.GENERAL);
 
             if (aC) await aC.send({ embeds: [archEmbed] });
-            if (gC && transcript) await gC.send({ content: `📜 **سجل تذكرة (${interaction.channel.name}):**\n\`\`\`text\n${transcript.slice(0, 1900)}\n\`\`\`` });
+            if (gC && transcript) await gC.send({ content: `📜 **سـجل تـذكرة (${interaction.channel.name}):**\n\`\`\`text\n${transcript.slice(0, 1900)}\n\`\`\`` });
 
             setTimeout(() => interaction.channel.delete().catch(() => {}), 2000);
         }
     }
 
-    // 5. التقييم (العضو فقط)
+    // 5. التقييم (العضو فقط) وحفظ التذكرة
     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('rate_')) {
         const ownerID = interaction.customId.split('_')[1];
         if (interaction.user.id !== ownerID) return interaction.reply({ content: "❌ هذا التقييم مخصص لصاحب التذكرة فقط!", ephemeral: true });
 
         const rating = interaction.values[0];
         const finalRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('final_save').setLabel('💾 تسجيل وأرشفة التذكرة (للإدارة)').setStyle(ButtonStyle.Primary)
+            new ButtonBuilder().setCustomId('save_v8').setLabel('💾 تسجيل وأرشفة التذكرة (للإدارة)').setStyle(ButtonStyle.Primary)
         );
 
         await interaction.update({ 
-            content: `✅ **تم استلام تقييم العضو: ${rating}/5 ⭐**\nيرجى من المسؤول الضغط على الزر أدناه للأرشفة والحذف.`, 
+            content: `✅ **تـم استلام تـقييم الـعضـو: ${rating}/5 ⭐**\nيـرجى مـن الـمـسؤول الضـغط لـلأرشفـة والـحذف.`, 
             components: [finalRow] 
         });
     }
 });
 
-client.login(CORE.TOKEN);
+client.login(process.env.TOKEN);
