@@ -14,6 +14,7 @@ const client = new Client({
     ]
 });
 
+// --- الإعدادات (IDs) ---
 const CONFIG = {
     TOKEN: process.env.TOKEN, 
     SERVER_ID: "1267986207569350709",
@@ -25,7 +26,7 @@ const CONFIG = {
     TRANSCRIPT_CHANNEL: "1516508105704214629"
 };
 
-// وظيفة التحقق: هل العضو إداري؟
+// وظيفة التحقق من الإدارة
 function checkStaff(member) {
     return CONFIG.ADMIN_ROLES.some(role => member.roles.cache.has(role)) || 
            member.roles.cache.has(CONFIG.OWNER_ROLE) ||
@@ -34,27 +35,66 @@ function checkStaff(member) {
 
 client.once('ready', async () => {
     console.log(`✅ المتصل الآن: ${client.user.tag}`);
+    
+    // تسجيل الأوامر مع إضافة وصف لكل خيار (حل مشكلة Invalid Form Body)
     const commands = [
-        { name: 'setup', description: 'إرسال بنل التذاكر الفخم' },
-        { name: 'move', description: 'نقل عضو صوتياً', options: [{name:'user',type:6,required:true},{name:'channel',type:7,required:true}] },
-        { name: 'disconnect', description: 'فصل عضو صوتياً', options: [{name:'user',type:6,required:true}] },
-        { name: 'timeout', description: 'تايم أوت لعضو', options: [{name:'user',type:6,required:true},{name:'minutes',type:4,required:true},{name:'reason',type:3}] },
-        { name: 'clear', description: 'تنظيف الشات', options: [{name:'amount',type:4,required:true}] }
+        { 
+            name: 'setup', 
+            description: 'إرسال بنل التذاكر الفخم لسيرفر Var Vat~' 
+        },
+        { 
+            name: 'move', 
+            description: 'نقل عضو من روم صوتي لآخر',
+            options: [
+                { name: 'user', description: 'العضو المراد نقله', type: 6, required: true },
+                { name: 'channel', description: 'الروم الصوتي المستهدف', type: 7, required: true }
+            ]
+        },
+        { 
+            name: 'disconnect', 
+            description: 'فصل عضو من الروم الصوتي',
+            options: [
+                { name: 'user', description: 'العضو المراد فصله', type: 6, required: true }
+            ]
+        },
+        { 
+            name: 'timeout', 
+            description: 'إعطاء تايم أوت (إسكات) لعضو',
+            options: [
+                { name: 'user', description: 'العضو المستهدف', type: 6, required: true },
+                { name: 'minutes', description: 'المدة بالدقائق', type: 4, required: true },
+                { name: 'reason', description: 'السبب', type: 3, required: false }
+            ]
+        },
+        { 
+            name: 'clear', 
+            description: 'مسح كمية محددة من الرسائل',
+            options: [
+                { name: 'amount', description: 'عدد الرسائل المراد مسحها', type: 4, required: true }
+            ]
+        }
     ];
+
     const rest = new REST({ version: '10' }).setToken(CONFIG.TOKEN);
-    try { await rest.put(Routes.applicationCommands(client.user.id), { body: commands }); } catch (err) { console.error(err); }
+    try {
+        await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+        console.log('✅ تم تسجيل جميع الأوامر بنجاح بدون أخطاء');
+    } catch (err) {
+        console.error('❌ فشل في تسجيل الأوامر:', err);
+    }
 });
 
+// --- لوحة التذاكر الفخمة ---
 async function sendLuxuryPanel(channel) {
     const serverIcon = channel.guild.iconURL({ dynamic: true, size: 1024 });
     const embed = new EmbedBuilder()
         .setTitle(`⚜️ صرح فخامة سيرفر ${channel.guild.name} ⚜️`)
-        .setDescription(`**أهلاً بك في قسم الخدمات الموحد**\n\n🔴 طلب بنرات | ⚫ طلب استيكرات | 🔵 دعم فني\n\n*يرجى اختيار القسم المناسب وفتح التذكرة.*`)
+        .setDescription(`**أهلاً بك في قسم الخدمات الموحد**\n\n🔴 طلب بنرات | ⚫ طلب استيكرات | 🔵 دعم فني\n\n*يرجى اختيار القسم المناسب وفتح التذكرة لإكمال بياناتك.*`)
         .setColor("#FF0000").setThumbnail(serverIcon).setImage(serverIcon)
-        .setFooter({ text: "Var Vat~ Management", iconURL: serverIcon });
+        .setFooter({ text: "نظام إدارة Var Vat~ الموحد", iconURL: serverIcon });
 
     const menu = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder().setCustomId('main_select').setPlaceholder('إختر الفئة من هنا...')
+        new StringSelectMenuBuilder().setCustomId('main_select').setPlaceholder('إختر القسم المطلوب...')
             .addOptions([
                 { label: 'طلب بنرات', value: 'banners', emoji: '🔴' },
                 { label: 'طلب استيكر', value: 'stickers', emoji: '⚫' },
@@ -66,32 +106,38 @@ async function sendLuxuryPanel(channel) {
 
 client.on('interactionCreate', async (interaction) => {
     
-    // أوامر الإدارة (Slash) - للإداري فقط
+    // 1. معالجة أوامر السلاش (للإدارة فقط)
     if (interaction.isChatInputCommand()) {
-        if (!checkStaff(interaction.member)) return interaction.reply({ content: "❌ عذراً، هذه الأوامر مخصصة للإدارة فقط.", ephemeral: true });
+        if (!checkStaff(interaction.member)) return interaction.reply({ content: "❌ عذراً، هذه الأوامر مخصصة للإدارة العليا فقط.", ephemeral: true });
 
         if (interaction.commandName === 'setup') {
             await sendLuxuryPanel(interaction.channel);
-            await interaction.reply({ content: "✅ تم إرسال البنل.", ephemeral: true });
+            return interaction.reply({ content: "✅ تم إرسال البنل.", ephemeral: true });
         }
         if (interaction.commandName === 'clear') {
-            await interaction.channel.bulkDelete(interaction.options.getInteger('amount'));
-            await interaction.reply({ content: "✅ تم تنظيف المحادثة.", ephemeral: true });
+            const amount = interaction.options.getInteger('amount');
+            await interaction.channel.bulkDelete(amount);
+            return interaction.reply({ content: `✅ تم مسح ${amount} رسالة.`, ephemeral: true });
         }
-        // ... باقي أوامر الإدارة (move, timeout) تعمل بنفس الطريقة ...
+        if (interaction.commandName === 'move') {
+            const member = interaction.options.getMember('user');
+            const channel = interaction.options.getChannel('channel');
+            if (!member.voice.channel) return interaction.reply({ content: "❌ العضو ليس في روم صوتي.", ephemeral: true });
+            await member.voice.setChannel(channel);
+            return interaction.reply({ content: `✅ تم نقل ${member} إلى ${channel.name}` });
+        }
     }
 
-    // فتح التذكرة (للكل)
+    // 2. فتح التذكرة والبيانات الإلزامية
     if (interaction.isStringSelectMenu() && interaction.customId === 'main_select') {
         const modal = new ModalBuilder().setCustomId(`modal_${interaction.values[0]}`).setTitle('بيانات فتح التذكرة');
         modal.addComponents(
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('u_name').setLabel("الاسم").setStyle(TextInputStyle.Short).setRequired(true)),
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('u_desc').setLabel("تفاصيل الطلب").setStyle(TextInputStyle.Paragraph).setRequired(true))
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('u_name').setLabel("الاسم الثلاثي").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('u_desc').setLabel("تفاصيل طلبك").setStyle(TextInputStyle.Paragraph).setRequired(true))
         );
         await interaction.showModal(modal);
     }
 
-    // إنشاء التذكرة (للكل)
     if (interaction.isModalSubmit()) {
         await interaction.deferReply({ ephemeral: true });
         const type = interaction.customId.split('_')[1];
@@ -110,57 +156,51 @@ client.on('interactionCreate', async (interaction) => {
             ],
         });
 
-        const embed = new EmbedBuilder().setTitle(`🛡️ تذكرة جديدة | ${catName}`).setColor(color)
+        const ticketEmbed = new EmbedBuilder().setTitle(`🛡️ تذكرة جديدة | ${catName}`).setColor(color)
             .addFields(
-                { name: "👤 صاحب التذكرة", value: `${interaction.user}`, inline: true },
+                { name: "👤 العضو", value: `${interaction.user}`, inline: true },
                 { name: "📝 الاسم", value: `\`\`\`${interaction.fields.getTextInputValue('u_name')}\`\`\``, inline: true },
                 { name: "📑 الطلب", value: `\`\`\`${interaction.fields.getTextInputValue('u_desc')}\`\`\`` }
             ).setTimestamp();
 
-        const btn = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('claim').setLabel('استلام التذكرة').setStyle(ButtonStyle.Success).setEmoji('✅'),
-            new ButtonBuilder().setCustomId('close').setLabel('إغلاق التذكرة').setStyle(ButtonStyle.Danger).setEmoji('🔒')
+        const btnRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('claim').setLabel('استلام').setStyle(ButtonStyle.Success).setEmoji('✅'),
+            new ButtonBuilder().setCustomId('close').setLabel('إغلاق').setStyle(ButtonStyle.Danger).setEmoji('🔒')
         );
 
-        await channel.send({ content: `<@&${supportID[0]}>`, embeds: [embed], components: [btn] });
-        await interaction.followUp({ content: `تم فتح تذكرتك بنجاح: ${channel}`, ephemeral: true });
+        await channel.send({ content: `<@&${supportID[0]}>`, embeds: [ticketEmbed], components: [btnRow] });
+        await interaction.followUp({ content: `تم فتح تذكرتك: ${channel}`, ephemeral: true });
     }
 
-    // أزرار التذكرة - (الإداري فقط)
+    // 3. أزرار التحكم (للإدارة فقط)
     if (interaction.isButton()) {
         const isStaff = checkStaff(interaction.member);
 
-        // زر الاستلام
         if (interaction.customId === 'claim') {
-            if (!isStaff) return interaction.reply({ content: "❌ هذا الزر مخصص للإدارة لاستلام التذكرة.", ephemeral: true });
-            await interaction.reply({ content: `✅ تم استلام التذكرة بواسطة الإداري: ${interaction.user}` });
+            if (!isStaff) return interaction.reply({ content: "❌ الاستلام للإدارة فقط.", ephemeral: true });
+            await interaction.reply({ content: `✅ التذكرة الآن تحت متابعة الإداري: ${interaction.user}` });
             const log = client.channels.cache.get(CONFIG.CLAIM_LOG);
-            if (log) log.send(`✅ الإداري **${interaction.user.tag}** استلم تذكرة **${interaction.channel.name}**`);
+            if (log) log.send(`✅ استلام تذكرة: **${interaction.channel.name}** بواسطة **${interaction.user.tag}**`);
         }
 
-        // زر الإغلاق
         if (interaction.customId === 'close') {
-            if (!isStaff) return interaction.reply({ content: "❌ عذراً، الإدارة فقط هي من يمكنها إغلاق التذاكر.", ephemeral: true });
+            if (!isStaff) return interaction.reply({ content: "❌ الإغلاق للإدارة فقط.", ephemeral: true });
             const rateMenu = new ActionRowBuilder().addComponents(
-                new StringSelectMenuBuilder().setCustomId('rate_final').setPlaceholder('قيم مستوى الخدمة...')
+                new StringSelectMenuBuilder().setCustomId('rate_val').setPlaceholder('قيم الخدمة...')
                 .addOptions([{label:'ممتاز ⭐⭐⭐⭐⭐', value:'5'}, {label:'سيء ⭐', value:'1'}])
             );
-            await interaction.reply({ content: "يرجى تقييم الخدمة قبل الأرشفة النهائية:", components: [rateMenu] });
+            await interaction.reply({ content: "التقييم مطلوب للأرشفة:", components: [rateMenu] });
         }
 
-        // زر التسجيل والحفظ (اللوجز العمودي)
         if (interaction.customId === 'save_and_exit') {
-            if (!isStaff) return interaction.reply({ content: "❌ فقط المسؤولين يمكنهم تأكيد الأرشفة والحذف.", ephemeral: true });
+            if (!isStaff) return interaction.reply({ content: "❌ الحفظ للإدارة فقط.", ephemeral: true });
+            await interaction.reply("⏳ جاري الأرشفة العمودية والحذف...");
             
-            await interaction.reply("⏳ جاري تسجيل البيانات والأرشفة العمودية...");
             const messages = await interaction.channel.messages.fetch({ limit: 100 });
             const verticalLog = messages.filter(m => !m.author.bot).map(m => `[${m.createdAt.toLocaleTimeString()}] ${m.author.tag}: ${m.content}`).reverse().join('\n');
 
             const logEmbed = new EmbedBuilder().setTitle("📁 أرشيف تذكرة نهائي").setColor("#FF0000")
-                .addFields(
-                    { name: "التذكرة", value: interaction.channel.name, inline: true },
-                    { name: "أغلق بواسطة", value: interaction.user.tag, inline: true }
-                ).setTimestamp();
+                .addFields({ name: "التذكرة", value: interaction.channel.name, inline: true }, { name: "أغلق بواسطة", value: interaction.user.tag, inline: true }).setTimestamp();
 
             const logChan = client.channels.cache.get(CONFIG.LOGS_CHANNEL);
             const transChan = client.channels.cache.get(CONFIG.TRANSCRIPT_CHANNEL);
@@ -174,13 +214,11 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    // التقييم (بعد ضغط الإداري على إغلاق)
-    if (interaction.isStringSelectMenu() && interaction.customId === 'rate_final') {
-        // بما أن الإداري هو من ضغط إغلاق، الزر سيظهر في الروم ليقوم الإداري بالضغط على الحفظ النهائي
+    if (interaction.isStringSelectMenu() && interaction.customId === 'rate_val') {
         const saveBtn = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('save_and_exit').setLabel('💾 تسجيل وحفظ التذكرة (إدارة فقط)').setStyle(ButtonStyle.Primary)
         );
-        await interaction.update({ content: `✅ التقييم مسجل. يرجى من المسؤول الضغط على الزر أدناه للأرشفة والحذف.`, components: [saveBtn] });
+        await interaction.update({ content: `✅ التقييم مسجل. للمسؤول: اضغط الزر للحفظ والحذف.`, components: [saveBtn] });
     }
 });
 
