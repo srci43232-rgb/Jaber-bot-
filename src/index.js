@@ -1,270 +1,193 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ChannelType, PermissionsBitField, AttachmentBuilder } = require('discord.js');
+const { 
+    Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, 
+    EmbedBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, 
+    TextInputStyle, PermissionsBitField, ChannelType, REST, Routes, ActivityType 
+} = require('discord.js');
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildPresences
     ]
 });
 
-// ====== كل الـ IDs بتاعتك ======
-const CONFIG = {
-    PANEL_CHANNEL_ID: '1516441752716709970', // روم فورم التذاكر
-    TICKETS_CATEGORY: '1516441716591296657', // كاتجوري عرض التذاكر
-    TRANSCRIPT_CATEGORY: '1516508105704214629', // كاتجوري حفظ التذاكر
-    CLOSE_CATEGORY: '1516499096796664030', // كاتجوري التقييم والاغلاق
-    
-    // رتب الاداريين
+// --- قاعدة البيانات السيادية لـ One City ---
+const ONE_CITY = {
+    TOKEN: process.env.TOKEN, 
+    SERVER_NAME: "One City",
+    // الأدوار الأربعة التي يمكنها رؤية والتحكم في التذاكر
     STAFF_ROLES: [
-        '1516441626384269343',
-        '1516441640510951584',
-        '1516441637570613349' // رتبة الدعم الفني
+        "1515819140697559140",
+        "1515819136251465740",
+        "1515819147508842586",
+        "1515819139506110555"
     ],
-    
-    // صورة GIF للبانل - احمر لامع
-    PANEL_GIF: 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3F4N3Y3cWZ2dDJ6dWN0bXQ1c3VvZ2Q4Z2J1aGJ0dGJ6b2J1eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L59aKIC2MFZ7G/giphy.gif'
-};
-
-const TICKET_TYPES = {
-    banner: {
-        label: 'بوابة البنرات الفاخرة',
-        emoji: '🔴',
-        color: 0xFF0000, // احمر لامع
-        desc: 'تصاميم سينمائية تخطف الأنظار'
+    CATEGORIES: {
+        OPEN: "1515819288542580736",    // كاتجوري فتح التذاكر
+        LOGS: "1515848735530160219",    // كاتجوري حفظ التذاكر
+        TRANSCRIPT: "1516067345116958780" // قناة النسخ المزخرفة
     },
-    sticker: {
-        label: 'بوابة الاستيكرات الملكية', 
-        emoji: '⚫',
-        color: 0x000000, // اسود لامع
-        desc: 'إضافات إبداعية تنبض بالتميز'
-    },
-    support: {
-        label: 'بوابة الدعم الفني المباشر',
-        emoji: '🔵', 
-        color: 0x3498DB, // ازرق
-        desc: 'تواصل حصري ومشفر مع كبار المسؤولين'
+    ASSETS: {
+        COLOR: "#FF0000",
+        GIF: "https://media.discordapp.net/attachments/1267986207569350709/jaber_pasha.png" // رابط الـ GIF
     }
 };
 
-client.once('ready', () => {
-    console.log(`✅ ${client.user.tag} شغال تمام`);
-    client.user.setActivity('Var Vat~ High Priority Protocol', { type: 3 });
-});
+// وظيفة فحص الصلاحيات الإدارية
+const isStaff = (member) => {
+    return ONE_CITY.STAFF_ROLES.some(id => member.roles.cache.has(id)) || 
+           member.permissions.has(PermissionsBitField.Flags.Administrator);
+};
 
-// امر عمل البانل
-client.on('messageCreate', async (message) => {
-    if (message.content === '!setup' && message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFF0000) // احمر لامع
-          .setTitle('||✧・ Var Vat~ High Priority Protocol ・||')
-          .setDescription(`
-بأرقى معايير الاحترافية تحت
-إشراف الإدارة العليا.
-
-───────────────
-**بوابات الخدمة الرئيسية:**
-
-${TICKET_TYPES.banner.emoji} **${TICKET_TYPES.banner.label}**
-*${TICKET_TYPES.banner.desc}*
-
-${TICKET_TYPES.sticker.emoji} **${TICKET_TYPES.sticker.label}**
-*${TICKET_TYPES.sticker.desc}*
-
-${TICKET_TYPES.support.emoji} **${TICKET_TYPES.support.label}**
-*${TICKET_TYPES.support.desc}*
-
-───────────────
-⚠️ **يلزم استيفاء بروتوكول البيانات في الخطوة القادمة لتفعيل الطلب.**
-
-*Var Vat~ High Priority Protocol • 2026*
-            `)
-          .setImage(CONFIG.PANEL_GIF)
-          .setFooter({ text: 'اختر البوابة المناسبة لطلبك من القائمة بالأسفل' });
-
-        const select = new StringSelectMenuBuilder()
-          .setCustomId('select_ticket')
-          .setPlaceholder('🔴 اختر نوع التذكرة من هنا')
-          .addOptions([
-                {
-                    label: TICKET_TYPES.banner.label,
-                    value: 'banner',
-                    emoji: '🔴',
-                    description: TICKET_TYPES.banner.desc
-                },
-                {
-                    label: TICKET_TYPES.sticker.label,
-                    value: 'sticker', 
-                    emoji: '⚫',
-                    description: TICKET_TYPES.sticker.desc
-                },
-                {
-                    label: TICKET_TYPES.support.label,
-                    value: 'support',
-                    emoji: '🔵',
-                    description: TICKET_TYPES.support.desc
-                }
-            ]);
-
-        const row = new ActionRowBuilder().addComponents(select);
-        await message.channel.send({ embeds: [embed], components: [row] });
-        await message.delete();
-    }
-});
-
-// فتح التذكرة
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isStringSelectMenu()) return;
-    if (interaction.customId!== 'select_ticket') return;
-
-    const type = interaction.values[0];
-    const ticketData = TICKET_TYPES[type];
+client.once('ready', async () => {
+    client.user.setPresence({ status: 'dnd', activities: [{ name: `${ONE_CITY.SERVER_NAME} Management`, type: ActivityType.Watching }] });
+    console.log(`[SYSTEM] 🛡️ بوت One City متصل: ${client.user.tag}`);
     
-    await interaction.deferReply({ ephemeral: true });
+    const commands = [{ name: 'setup', description: 'تثبيت المنظومة الإدارية لخدمات One City' }];
+    const rest = new REST({ version: '10' }).setToken(ONE_CITY.TOKEN);
+    try { await rest.put(Routes.applicationCommands(client.user.id), { body: commands }); } catch (e) { console.error(e); }
+});
 
-    const ticketChannel = await interaction.guild.channels.create({
-        name: `||✧・${type}-${interaction.user.username}・`,
-        type: ChannelType.GuildText,
-        parent: CONFIG.TICKETS_CATEGORY,
-        permissionOverwrites: [
-            {
-                id: interaction.guild.id,
-                deny: [PermissionsBitField.Flags.ViewChannel],
-            },
-            {
-                id: interaction.user.id,
-                allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
-            },
-          ...CONFIG.STAFF_ROLES.map(roleId => ({
-                id: roleId,
-                allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory, PermissionsBitField.Flags.ManageMessages],
-            }))
-        ],
-    });
+// --- البنل الرئيسي الفخم ---
+async function sendLuxuryPanel(channel) {
+    const icon = channel.guild.iconURL({ size: 1024, dynamic: true });
+    const panel = new EmbedBuilder()
+        .setAuthor({ name: `${ONE_CITY.SERVER_NAME} Digital Services`, iconURL: icon })
+        .setTitle("♛ مـنـظـومـة الـنـخـبـة لـلـخـدمـات والـبـلاغـات ♛")
+        .setDescription(`
+        **« بـروتوكول الـتـعـامـلات الـرسـمية لـمـديـنة ${ONE_CITY.SERVER_NAME} »**
+        
+        مرحباً بك في الوجهة الرسمية والوحيدة. تم تصميم هذا النظام لضمان الدقة والسرعة تحت إشراف طاقم الإدارة العليا.
+        
+        ━━━━━━━━━━━━━━━━━━━━━━
+        **💠 بـوابـات الـخـدمـة الـمـتـاحة :**
+        
+        🟢 **بـوابة الـبلاغـات ضـد لـاعـب (Player Report)**
+        *لـتـقـديـم الـشـكـاوى ضـد الـمـواطـنـين الـمـخـالـفـين.*
 
-    const ticketEmbed = new EmbedBuilder()
-      .setColor(ticketData.color)
-      .setTitle(`${ticketData.emoji} تذكرة ${ticketData.label}`)
-      .setDescription(`
-مرحباً ${interaction.user}
+        🔴 **بـوابة الـبلاغـات ضـد إداري (Staff Report)**
+        *قـسـم مـشـفـر لـلـتـظلمـات الإداريـة بـحـمـاية عـالـية.*
 
-**تم فتح تذكرتك بنجاح** ✅
-النوع: ${ticketData.label}
-${ticketData.desc}
-
-───────────────
-**⚠️ بروتوكول البيانات:**
-يرجى كتابة طلبك بالتفصيل مع ارفاق اي صور او روابط مطلوبة.
-سيتم الرد عليك من قبل الفريق المختص في اقرب وقت.
+        🔵 **بـوابـة الـدعـم الـفـنـي (Technical Core)**
+        *تـواصـل حـصـري مـع كـبـار الـمـسـؤولـيـن لـلـمسـاعدة.*
+        ━━━━━━━━━━━━━━━━━━━━━━
+        
+        *⚠️ يـلـزم اسـتـيفاء الـبـيـانات فـي الـنـافـذة الـقـادمة لـتـفـعـيـل الـطلب.*
         `)
-      .setFooter({ text: `Var Vat~ Support System • ${interaction.user.id}` })
-      .setTimestamp();
+        .setColor(ONE_CITY.ASSETS.COLOR)
+        .setImage(ONE_CITY.ASSETS.GIF)
+        .setThumbnail(icon)
+        .setFooter({ text: `${ONE_CITY.SERVER_NAME} High Priority Protocol • 2026` });
 
-    const buttons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('claim_ticket')
-          .setLabel('استلام التذكرة')
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji('🙋‍♂️'),
-        new ButtonBuilder()
-          .setCustomId('close_ticket')
-          .setLabel('تسجيل واغلاق التذكرة')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🔒')
+    const menu = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder().setCustomId('city_gate').setPlaceholder('🔱 إخـتـر بـوابـة الـخـدمـة لـلـمـتـابـعة...')
+            .addOptions([
+                { label: 'بلاغ ضد لاعب', value: 'v_player', emoji: '🟢' },
+                { label: 'بلاغ ضد إداري', value: 'v_staff', emoji: '🔴' },
+                { label: 'الدعم الفني', value: 'v_support', emoji: '🔵' },
+            ])
     );
+    await channel.send({ embeds: [panel], components: [menu] });
+}
 
-    await ticketChannel.send({ 
-        content: `${interaction.user} ${CONFIG.STAFF_ROLES.map(r => `<@&${r}>`).join(' ')}`, 
-        embeds: [ticketEmbed], 
-        components: [buttons] 
-    });
-    
-    await interaction.editReply({ content: `✅ تم فتح تذكرتك: ${ticketChannel}` });
-});
-
-// الازرار
 client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isButton()) return;
-
-    const { customId, channel, user, guild } = interaction;
-
-    // زر استلام التذكرة
-    if (customId === 'claim_ticket') {
-        const isStaff = interaction.member.roles.cache.some(role => CONFIG.STAFF_ROLES.includes(role.id));
-        if (!isStaff) return interaction.reply({ content: '❌ هذا الزر للادارة فقط', ephemeral: true });
-
-        await channel.setName(`||✧・claimed-${user.username}・`);
-        const embed = new EmbedBuilder()
-          .setColor(0x00FF00)
-          .setDescription(`🙋‍♂️ تم استلام التذكرة بواسطة ${user}`);
-        
-        await interaction.reply({ embeds: [embed] });
+    
+    if (interaction.isChatInputCommand() && interaction.commandName === 'setup') {
+        if (!isStaff(interaction.member)) return interaction.reply({ content: "⚠️ للإدارة فقط.", ephemeral: true });
+        await sendLuxuryPanel(interaction.channel);
+        return interaction.reply({ content: "✅ تم تفعيل المنظومة.", ephemeral: true });
     }
 
-    // زر الاغلاق والتسجيل
-    if (customId === 'close_ticket') {
-        const isStaff = interaction.member.roles.cache.some(role => CONFIG.STAFF_ROLES.includes(role.id));
-        if (!isStaff) return interaction.reply({ content: '❌ هذا الزر للادارة فقط', ephemeral: true });
+    if (interaction.isStringSelectMenu() && interaction.customId === 'city_gate') {
+        const modal = new ModalBuilder().setCustomId(`mod_${interaction.values[0]}`).setTitle('🛡️ بـروتوكول تـحـقـيق الـبـيـانـات');
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('fn').setLabel("الاسـم الـرسـمـي").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('fd').setLabel("تـفـاصـيـل الـطلب / الـبلاغ").setStyle(TextInputStyle.Paragraph).setRequired(true))
+        );
+        return interaction.showModal(modal);
+    }
 
-        await interaction.deferReply();
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('mod_')) {
+        await interaction.deferReply({ ephemeral: true });
+        const type = interaction.customId.split('_')[1];
+        let s = { c: "#00FF00", l: "ضد-لاعب", e: "🟢" };
+        if (type === 'v_staff') s = { c: "#FF0000", l: "ضد-إداري", e: "🔴" };
+        if (type === 'v_support') s = { c: "#0080FF", l: "دعم-فني", e: "🔵" };
 
-        // حفظ الترانسكربت
-        const messages = await channel.messages.fetch({ limit: 100 });
-        const transcript = messages.reverse().map(m => `[${m.createdAt.toLocaleString('ar-EG')}] ${m.author.tag}: ${m.content}`).join('\n');
-        
-        const attachment = new AttachmentBuilder(Buffer.from(transcript), { name: `transcript-${channel.name}.txt` });
-        
-        const logChannel = guild.channels.cache.get(CONFIG.TRANSCRIPT_CATEGORY);
-        if (logChannel) {
-            const logEmbed = new EmbedBuilder()
-              .setColor(0xFF0000)
-              .setTitle('📁 تم ارشفة تذكرة')
-              .addFields(
-                    { name: 'اسم التذكرة', value: channel.name, inline: true },
-                    { name: 'اغلقت بواسطة', value: user.tag, inline: true }
-                )
-              .setTimestamp();
-            
-            await logChannel.send({ embeds: [logEmbed], files: [attachment] });
-        }
+        const channel = await interaction.guild.channels.create({
+            name: `${s.e}-${s.l}-${interaction.user.username}`,
+            parent: ONE_CITY.CATEGORIES.OPEN,
+            permissionOverwrites: [
+                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                // السماح للأدوار الأربعة برؤية التذكرة والتحكم بها
+                ...ONE_CITY.STAFF_ROLES.map(id => ({ id: id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
+            ],
+        });
 
-        // رسالة التقييم
-        const ratingRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('rate_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('rate_4').setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('rate_3').setLabel('⭐⭐⭐').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('rate_2').setLabel('⭐⭐').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('rate_1').setLabel('⭐').setStyle(ButtonStyle.Danger)
+        const welcome = new EmbedBuilder()
+            .setTitle(`${s.e} مـذكـرة خـدمـة رسـمـية - ${ONE_CITY.SERVER_NAME}`)
+            .setColor(s.c)
+            .addFields(
+                { name: "👤 الـعـمـيـل", value: `> ${interaction.user.tag}`, inline: true },
+                { name: "📝 الـاسـم", value: `> ${interaction.fields.getTextInputValue('fn')}`, inline: true },
+                { name: "📄 الـمـلـف الـمُـقـدم", value: `\`\`\`text\n${interaction.fields.getTextInputValue('fd')}\n\`\`\`` }
+            ).setThumbnail(interaction.user.displayAvatarURL());
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('claim_v').setLabel('تولي المهمة').setStyle(ButtonStyle.Success).setEmoji('✅'),
+            new ButtonBuilder().setCustomId('close_v').setLabel('إنهاء الإجراء').setStyle(ButtonStyle.Danger).setEmoji('🔒')
         );
 
-        const ratingEmbed = new EmbedBuilder()
-          .setColor(0xFFD700)
-          .setTitle('📊 قيم تجربتك مع الدعم الفني')
-          .setDescription('رأيك يهمنا! قيّم الخدمة اللي وصلك عشان نحسن من نفسنا');
-
-        await interaction.editReply({ content: '✅ تم تسجيل التذكرة وحفظها. سيتم حذف الروم خلال 10 ثواني', embeds: [ratingEmbed], components: [ratingRow] });
-
-        setTimeout(() => channel.delete().catch(() => {}), 10000);
+        await channel.send({ content: `<@&${ONE_CITY.STAFF_ROLES[0]}>`, embeds: [welcome], components: [row] });
+        return interaction.followUp({ content: `✅ تم تفعيل بوابتك: ${channel}`, ephemeral: true });
     }
 
-    // ازرار التقييم
-    if (customId.startsWith('rate_')) {
-        const rating = customId.split('_')[1];
-        await interaction.reply({ content: `✅ شكراً لتقييمك ${'⭐'.repeat(rating)}! تم ارسال تقييمك للادارة`, ephemeral: true });
-        
-        const rateChannel = guild.channels.cache.get(CONFIG.CLOSE_CATEGORY);
-        if (rateChannel) {
-            const rateEmbed = new EmbedBuilder()
-              .setColor(0xFFD700)
-              .setTitle('⭐ تقييم جديد')
-              .addFields(
-                    { name: 'المستخدم', value: user.tag, inline: true },
-                    { name: 'التقييم', value: '⭐'.repeat(rating), inline: true }
-                );
-            await rateChannel.send({ embeds: [rateEmbed] });
+    if (interaction.isButton()) {
+        if (!isStaff(interaction.member)) return interaction.reply({ content: "❌ عذراً، لا تملك تصريحاً إدارياً.", ephemeral: true });
+
+        if (interaction.customId === 'claim_v') {
+            return interaction.reply({ embeds: [new EmbedBuilder().setColor("#00FF00").setDescription(`✅ تم استلام المهمة بواسطة: ${interaction.user}`)] });
         }
+
+        if (interaction.customId === 'close_v') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder().setCustomId('rate_city').setPlaceholder('🌟 تقييم جودة الخدمة (للمسؤول)...')
+                    .addOptions([{ label: 'ممتاز ⭐⭐⭐⭐⭐', value: '5' }, { label: 'ضعيف ⭐', value: '1' }])
+            );
+            await interaction.reply({ content: "يرجى التقييم قبل الحفظ النهائي:", components: [row] });
+        }
+
+        if (interaction.customId === 'save_final_city') {
+            await interaction.reply("⏳ جاري تسجيل الأرشيف المزخرف...");
+            const msgs = await interaction.channel.messages.fetch({ limit: 100 });
+            
+            // سجل عمودي مزخرف كما طلبت
+            const transcript = msgs.filter(m => !m.author.bot)
+                .map(m => `╭╼━━━━━━╾╮\n┃ 👤 [${m.author.tag}]\n┃ 🕒 [${m.createdAt.toLocaleTimeString()}]\n┃ 💬 : ${m.content}\n╰╼━━━━━━╾╯`)
+                .reverse().join('\n\n');
+
+            const archEmbed = new EmbedBuilder().setTitle("📂 مـلـف أرشـيـف: One City").setColor("#FF0000")
+                .addFields({ name: "التذكرة", value: interaction.channel.name, inline: true }, { name: "المسؤول", value: interaction.user.tag, inline: true }).setTimestamp();
+
+            const transChan = client.channels.cache.get(ONE_CITY.CATEGORIES.TRANSCRIPT);
+            const logsChan = client.channels.cache.get(ONE_CITY.CATEGORIES.LOGS);
+
+            if (transChan) {
+                await transChan.send({ embeds: [archEmbed] });
+                if (transcript) await transChan.send({ content: `📜 **سـجل مـحادثـة عـمـودي:**\n\n${transcript.slice(0, 1900)}` });
+            }
+            if (logsChan) await logsChan.send({ embeds: [archEmbed] });
+
+            setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
+        }
+    }
+
+    if (interaction.isStringSelectMenu() && interaction.customId === 'rate_city') {
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('save_final_city').setLabel('💾 تسجيل وحفظ التذكرة (إدارة)').setStyle(ButtonStyle.Primary));
+        await interaction.update({ content: `✅ تـم تسجيل التقييم. للمسؤول: إضـغط لـلأرشفة والـحـذف.`, components: [row] });
     }
 });
 
-// التوكن من متغيرات البيئة
-client.login(process.env.TOKEN);
+client.login(ONE_CITY.TOKEN);
