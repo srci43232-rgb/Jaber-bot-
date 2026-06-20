@@ -12,7 +12,7 @@ const client = new Client({
     ]
 });
 
-// --- قاعدة البيانات الملكية (Var Vat~) ---
+// --- قاعدة البيانات السيادية لـ Var Vat~ ---
 const CORE = {
     TOKEN: process.env.TOKEN, 
     SERVER_ID: "1267986207569350709",
@@ -26,12 +26,12 @@ const CORE = {
         WELCOME: "1514696892246786089"
     },
     ASSETS: {
-        COLOR: "#FF0000",
+        COLOR: "#FF0000", // أحمر لامع
         GIF: "https://media.discordapp.net/attachments/1267986207569350709/jaber_pasha.png" 
     }
 };
 
-// فحص السلطة الإدارية
+// وظيفة فحص السلطة الإدارية
 const hasAuth = (member) => {
     return CORE.ADMIN_ROLES.some(id => member.roles.cache.has(id)) || 
            member.id === CORE.OWNER_ID || 
@@ -39,40 +39,42 @@ const hasAuth = (member) => {
 };
 
 client.once('ready', async () => {
+    // ضبط لمبة الاتصال (اللون الأحمر - Do Not Disturb)
     client.user.setPresence({
         status: 'dnd', 
         activities: [{ name: 'Var Vat~ Management', type: ActivityType.Watching }]
     });
+
+    console.log(`[SYSTEM] 🛡️ البروتوكول الملكي متصل: ${client.user.tag}`);
     
     const commands = [
-        { name: 'setup', description: 'تثبيت المنظومة الإدارية والبنل الرسمي' },
-        { name: 'clear', description: 'تطهير الشات', options: [{ name: 'amount', description: 'عدد الرسائل', type: 4, required: true }] }
+        { name: 'setup', description: 'تثبيت المنظومة الإدارية والبنل الرسمي لخدمات السيرفر' },
+        { name: 'clear', description: 'تطهير الشات من الرسائل العالقة', options: [{ name: 'amount', description: 'عدد الرسائل', type: 4, required: true }] },
+        { name: 'timeout', description: 'تقييد عضو إدارياً (تايم أوت)', options: [{ name: 'user', description: 'العضو المستهدف', type: 6, required: true }, { name: 'minutes', description: 'المدة بالدقائق', type: 4, required: true }] }
     ];
 
     const rest = new REST({ version: '10' }).setToken(CORE.TOKEN);
     try {
         await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
-        console.log('✅ المنظومة جاهزة للعمل بأقصى سرعة');
+        console.log('[SYSTEM] ✅ تمت مزامنة البروتوكولات السيادية');
     } catch (e) { console.error(e); }
 });
 
+// --- بروتوكول الترحيب الملكي ---
+client.on('guildMemberAdd', async (member) => {
+    const channel = member.guild.channels.cache.get(CORE.CHANNELS.WELCOME);
+    if (!channel) return;
+    const welcomeEmbed = new EmbedBuilder()
+        .setTitle(`✧ مـرحـبـاً بـك فـي ديـوان ${member.guild.name} ✧`)
+        .setDescription(`> **نستقبل اليوم عضواً جديداً في طليعة نخبتنا.**\n\n**👤 الـعـضـو:** ${member}\n**🆔 الـهـويـة:** \`${member.id}\`\n**🔢 الـتـسلسـل:** \`#${member.guild.memberCount}\``)
+        .setColor(CORE.ASSETS.COLOR).setThumbnail(member.user.displayAvatarURL({ dynamic: true })).setImage(CORE.ASSETS.GIF).setTimestamp();
+    channel.send({ content: `**أهلاً بك ${member}**`, embeds: [welcomeEmbed] });
+});
+
+// --- معالج التفاعلات المركزية ---
 client.on('interactionCreate', async (interaction) => {
     
-    // 1. فتح المودال (أسرع استجابة ممكنة لمنع الـ Thinking)
-    if (interaction.isStringSelectMenu() && interaction.customId === 'gate_select') {
-        const type = interaction.values[0];
-        const modal = new ModalBuilder().setCustomId(`mod_${type}`).setTitle('🛡️ بـروتوكول تـحـقـيق الـبـيـانـات');
-        
-        const f1 = new TextInputBuilder().setCustomId('fn').setLabel("الاسـم الـرسـمـي").setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder("أدخل اسمك الثلاثي...");
-        const f2 = new TextInputBuilder().setCustomId('fd').setLabel("تـفـاصـيـل الـطـلـب").setStyle(TextInputStyle.Paragraph).setRequired(true).setPlaceholder("اشرح طلبك بالتفصيل لضمان سرعة التنفيذ...");
-
-        modal.addComponents(new ActionRowBuilder().addComponents(f1), new ActionRowBuilder().addComponents(f2));
-        
-        // تنفيذ فوري بدون أي تفكير (No Await before this)
-        return interaction.showModal(modal);
-    }
-
-    // 2. أوامر السلاش الإدارية
+    // 1. أوامر السلاش (إدارية فقط)
     if (interaction.isChatInputCommand()) {
         if (!hasAuth(interaction.member)) return interaction.reply({ content: "⚠️ للإدارة فقط.", ephemeral: true });
 
@@ -90,9 +92,14 @@ client.on('interactionCreate', async (interaction) => {
                 ━━━━━━━━━━━━━━━━━━━━━━
                 **💠 بـوابـات الـخـدمـة الـرئيسية :**
                 
-                🔴 **بـوابـة الـبـنـرات الـفـاخـرة**
-                ⚫ **بـوابـة الاسـتـيـكـرات الـمـلكيـة**
-                🔵 **بـوابـة الـدعـم الـفـنـي الـمـبـاشـر**
+                🔴 **بـوابـة الـبـنـرات الـفـاخـرة (Elite Banners)**
+                *تـصـامـيـم سـيـنـمـائـيـة تـخـطف الأنـظار.*
+
+                ⚫ **بـوابـة الاسـتـيـكـرات الـمـلكيـة (Royal Stickers)**
+                *إضـافات إبـداعيـة تـنـبـض بـالـتميز.*
+
+                🔵 **بـوابـة الـدعـم الـفـنـي الـمـبـاشـر (Technical Core)**
+                *تـواصـل حـصـري ومـشـفـر مـع كـبـار الـمـسـؤولـيـن.*
                 ━━━━━━━━━━━━━━━━━━━━━━
                 
                 *⚠️ يـلـزم اسـتـيفاء بـروتوكول الـبـيـانات في الـخطوة القادمة لـتـفـعـيـل الـطلب.*
@@ -101,11 +108,11 @@ client.on('interactionCreate', async (interaction) => {
                 .setFooter({ text: "Var Vat~ High Priority Protocol • 2026" });
 
             const selector = new ActionRowBuilder().addComponents(
-                new StringSelectMenuBuilder().setCustomId('gate_select').setPlaceholder('🔱 إخـتـر بـوابـة الـخـدمـة لـلـمـتـابـعة...')
+                new StringSelectMenuBuilder().setCustomId('gate_select_v12').setPlaceholder('🔱 إخـتـر بـوابـة الـخـدمـة لـلـمـتـابـعة...')
                     .addOptions([
-                        { label: 'بوابة البنرات', value: 'banners', emoji: '🔴' },
-                        { label: 'بوابة الاستيكرات', value: 'stickers', emoji: '⚫' },
-                        { label: 'بوابة الدعم الفني', value: 'support', emoji: '🔵' },
+                        { label: 'بوابة البنرات', value: 'v_banners', emoji: '🔴' },
+                        { label: 'بوابة الاستيكرات', value: 'v_stickers', emoji: '⚫' },
+                        { label: 'بوابة الدعم الفني', value: 'v_support', emoji: '🔵' },
                     ])
             );
             return interaction.reply({ embeds: [mainPanel], components: [selector] });
@@ -113,17 +120,28 @@ client.on('interactionCreate', async (interaction) => {
         
         if (interaction.commandName === 'clear') {
             await interaction.channel.bulkDelete(interaction.options.getInteger('amount'));
-            return interaction.reply({ content: "✅ تم التطهير.", ephemeral: true });
+            return interaction.reply({ content: "✅ تم تطهير الشات.", ephemeral: true });
         }
     }
 
-    // 3. إنشاء التذكرة (بعد إرسال المودال)
+    // 2. بروتوكول المودال (أسرع استجابة لمنع الـ Thinking)
+    if (interaction.isStringSelectMenu() && interaction.customId === 'gate_select_v12') {
+        const type = interaction.values[0];
+        const modal = new ModalBuilder().setCustomId(`mod_${type}`).setTitle('🛡️ بـروتوكول تـحـقـيق الـبـيـانـات');
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('fn').setLabel("الاسـم الـرسـمـي").setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder("أدخل اسمك الثلاثي...")),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('fd').setLabel("تـفـاصـيـل الـطـلـب").setStyle(TextInputStyle.Paragraph).setRequired(true).setPlaceholder("اشرح طلبك بالتفصيل لضمان سرعة التنفيذ..."))
+        );
+        return interaction.showModal(modal);
+    }
+
+    // 3. إنشاء قناة التذكرة
     if (interaction.isModalSubmit() && interaction.customId.startsWith('mod_')) {
         await interaction.deferReply({ ephemeral: true });
         const type = interaction.customId.split('_')[1];
         let s = { c: "#FF0000", l: "Banner", e: "🔴" };
-        if (type === 'stickers') s = { c: "#000000", l: "Sticker", e: "⚫" };
-        if (type === 'support') s = { c: "#0080FF", l: "Support", e: "🔵" };
+        if (type === 'v_stickers') s = { c: "#000000", l: "Sticker", e: "⚫" };
+        if (type === 'v_support') s = { c: "#0080FF", l: "Support", e: "🔵" };
 
         const channel = await interaction.guild.channels.create({
             name: `🔱-${s.l}-${interaction.user.username}`,
@@ -141,42 +159,43 @@ client.on('interactionCreate', async (interaction) => {
             .addFields(
                 { name: "👤 الـعـمـيـل", value: `> ${interaction.user.tag}`, inline: true },
                 { name: "📝 الـاسم", value: `> ${interaction.fields.getTextInputValue('fn')}`, inline: true },
-                { name: "📄 الـمـلف", value: `\`\`\`text\n${interaction.fields.getTextInputValue('fd')}\n\`\`\`` }
+                { name: "📄 بـيانـات الـمـلـف", value: `\`\`\`text\n${interaction.fields.getTextInputValue('fd')}\n\`\`\`` }
             ).setThumbnail(interaction.user.displayAvatarURL());
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('claim_v11').setLabel('تولي المهمة').setStyle(ButtonStyle.Success).setEmoji('✅'),
-            new ButtonBuilder().setCustomId('close_v11').setLabel('إنهاء الإجراء').setStyle(ButtonStyle.Danger).setEmoji('🔒')
+            new ButtonBuilder().setCustomId('claim_v12').setLabel('تولي المهمة').setStyle(ButtonStyle.Success).setEmoji('✅'),
+            new ButtonBuilder().setCustomId('close_v12').setLabel('إنهاء الإجراء').setStyle(ButtonStyle.Danger).setEmoji('🔒')
         );
 
         await channel.send({ content: `<@&${CORE.ADMIN_ROLES[0]}>`, embeds: [welcome], components: [row] });
-        return interaction.followUp({ content: `✅ تم تفعيل بوابتك: ${channel}`, ephemeral: true });
+        return interaction.followUp({ content: `✅ تم تفعيل بوابتك الملكية: ${channel}`, ephemeral: true });
     }
 
-    // 4. أزرار الإدارة
+    // 4. أزرار الإدارة وحماية السيادة
     if (interaction.isButton()) {
-        if (!hasAuth(interaction.member)) return interaction.reply({ content: "❌ للإدارة العليا فقط.", ephemeral: true });
+        const auth = hasAuth(interaction.member);
+        if (!auth) return interaction.reply({ content: "❌ عذراً، لا تملك تصريحاً إدارياً.", ephemeral: true });
 
-        if (interaction.customId === 'claim_v11') {
-            return interaction.reply({ embeds: [new EmbedBuilder().setColor("#00FF00").setDescription(`✅ تم استلام المهمة بواسطة: ${interaction.user}`)] });
+        if (interaction.customId === 'claim_v12') {
+            return interaction.reply({ embeds: [new EmbedBuilder().setColor("#00FF00").setDescription(`✅ تـم تـولـي الـمـهـمة بـواسـطـة الـمسؤول: ${interaction.user}`)] });
         }
 
-        if (interaction.customId === 'close_v11') {
+        if (interaction.customId === 'close_v12') {
             const row = new ActionRowBuilder().addComponents(
-                new StringSelectMenuBuilder().setCustomId('rate_v11').setPlaceholder('🌟 تقييم مستوى الخدمة (للإدارة)...')
+                new StringSelectMenuBuilder().setCustomId('rate_v12').setPlaceholder('🌟 تقييم مستوى الخدمة (للإدارة)...')
                     .addOptions([{ label: 'ممتاز ⭐⭐⭐⭐⭐', value: '5' }, { label: 'ضعيف ⭐', value: '1' }])
             );
             return interaction.reply({ content: "بانتظار تقييم المسؤول قبل الحفظ النهائي والأرشفة:", components: [row] });
         }
 
-        if (interaction.customId === 'save_v11') {
+        if (interaction.customId === 'save_v12') {
             await interaction.reply("⏳ جاري تسجيل الأرشيف العمودي...");
             const msgs = await interaction.channel.messages.fetch({ limit: 100 });
             const transcript = msgs.filter(m => !m.author.bot)
                 .map(m => `┃ [${m.createdAt.toLocaleTimeString()}] ${m.author.tag} ➔ ${m.content}`).reverse().join('\n');
 
-            const archEmbed = new EmbedBuilder().setTitle("📂 مـلـف أرشـيـف").setColor("#FF0000")
-                .addFields({ name: "التذكرة", value: interaction.channel.name, inline: true }, { name: "بواسطة", value: interaction.user.tag, inline: true }).setTimestamp();
+            const archEmbed = new EmbedBuilder().setTitle("📂 مـلـف أرشـيـف نهائي").setColor("#FF0000")
+                .addFields({ name: "التذكرة", value: interaction.channel.name, inline: true }, { name: "المسؤول", value: interaction.user.tag, inline: true }).setTimestamp();
 
             const aC = client.channels.cache.get(CORE.CHANNELS.ARCHIVE);
             const gC = client.channels.cache.get(CORE.CHANNELS.LOGS);
@@ -188,9 +207,9 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    if (interaction.isStringSelectMenu() && interaction.customId === 'rate_v11') {
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('save_v11').setLabel('💾 تسجيل وحفظ (إدارة)').setStyle(ButtonStyle.Primary));
-        await interaction.update({ content: `✅ تـم الـتـقـيـيـم. للمسؤول: إضـغط لـلأرشفة والـحـذف.`, components: [row] });
+    if (interaction.isStringSelectMenu() && interaction.customId === 'rate_v12') {
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('save_v12').setLabel('💾 تسجيل وحفظ التذكرة (إدارة)').setStyle(ButtonStyle.Primary));
+        await interaction.update({ content: `✅ تـم تسجيل التقييم الإداري. للمسؤول: إضـغط لـلأرشفة والـحـذف.`, components: [row] });
     }
 });
 
