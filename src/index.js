@@ -14,7 +14,7 @@ const client = new Client({
     ]
 });
 
-// --- إعدادات مدينة One City RP ---
+// --- الإعدادات المركزية لمدينة One City RP ---
 const CONFIG = {
     TOKEN: process.env.TOKEN,
     GUILD_ID: "1381360453485334658",
@@ -22,24 +22,39 @@ const CONFIG = {
     LOGS_ID: "1517942325383270502",
     WELCOME_ID: "1517931611994193980",
     NEW_USER_ROLE: "1518613075140284446",
-    AUTH_USERS: ["1349214233262297149", "1517002644676411592"],
+    OWNER_IDS: ["1349214233262297149", "1517002644676411592"],
 
+    // رتب استلام تذاكر (ضد لاعب)
     PLAYER_ROLES: ["1517931439054913596", "1517931433199669533", "1517931427600007258", "1517931426069348446"],
-    STAFF_ROLES: ["1517931426069348446", "1517931425372962947", "1517002645666267197", "1517164221329309727", "1517144275836735628", "1517002643619446855", "1517002644676411592"],
+
+    // رتب استلام تذاكر (ضد إداري)
+    STAFF_REPORT_ROLES: ["1517931426069348446", "1517931425372962947", "1517002645666267197", "1517164221329309727", "1517144275836735628", "1517002643619446855", "1517002644676411592"],
+
+    // رتب استلام تذاكر (الدعم الفني)
     TECH_ROLES: ["1518455838858150058"]
 };
 
-// وظيفة التحقق من الإدارة
+// وظيفة فحص الإدارة
 function isStaff(member) {
     if (!member) return false;
-    const allStaffRoles = [...CONFIG.PLAYER_ROLES, ...CONFIG.STAFF_ROLES, ...CONFIG.TECH_ROLES];
-    return member.roles.cache.hasAny(...allStaffRoles) || CONFIG.AUTH_USERS.includes(member.id);
+    const allStaffRoles = [...CONFIG.PLAYER_ROLES, ...CONFIG.STAFF_REPORT_ROLES, ...CONFIG.TECH_ROLES];
+    return member.roles.cache.hasAny(...allStaffRoles) || CONFIG.OWNER_IDS.includes(member.id);
 }
 
 client.once(Events.ClientReady, async (c) => {
-    console.log(`✅ One City Royal System Activated: ${c.user.tag}`);
+    console.log(`✅ One City Royal Bot is Online: ${c.user.tag}`);
     const guild = client.guilds.cache.get(CONFIG.GUILD_ID);
-    if (guild) await guild.commands.set([{ name: 'setup', description: 'تجهيز المنصة الإدارية الملكية' }]);
+    if (guild) {
+        await guild.commands.set([{ name: 'setup', description: 'تجهيز المنصة الإدارية الملكية' }]);
+        
+        // إعطاء الرتبة لمن ليس لديه رتبة إدارية حالياً
+        const members = await guild.members.fetch();
+        members.forEach(member => {
+            if (!isStaff(member) && !member.user.bot && !member.roles.cache.has(CONFIG.NEW_USER_ROLE)) {
+                member.roles.add(CONFIG.NEW_USER_ROLE).catch(() => {});
+            }
+        });
+    }
 });
 
 // --- نظام الترحيب الفخم ---
@@ -52,27 +67,27 @@ client.on(Events.GuildMemberAdd, async (member) => {
     if (welcomeChan) {
         const welcomeEmbed = new EmbedBuilder()
             .setColor("#FF0000")
-            .setAuthor({ name: `سِجِل القادمين الجدد | One City RP`, iconURL: member.guild.iconURL() })
+            .setAuthor({ name: `قادم جديد إلى مدينة One City RP`, iconURL: member.guild.iconURL() })
+            .setTitle(`🌆 أهلاً بك في مدينة الأحلام 🌆`)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 512 }))
-            .setTitle(`✨ أهلاً بك في مدينة النخبة ✨`)
             .setDescription(`
-                ╭─── · · 🏙️ · · ───╮
+                ╭─── · · 👑 · · ───╮
                   **مرحباً بك عزيزي المواطن**
                   ${member}
-                ╰─── · · 🏙️ · · ───╯
+                ╰─── · · 👑 · · ───╯
 
-                > **تـشـرفـنـا بـانـضـمـامـك إلـى أفـخـم بـيـئـة لـعـب واقـعـي.. نـتـمـنـى لـك إقـامـة مـمـتـعـة داخـل أسـوار مـديـنـتـنـا.**
+                > **تـشـرفـنـا بـانـضـمـامـك إلـى أفـخـم بـيـئـة لـعـب واقـعـي.. نـتـمـنـى لـك رحـلـة مـمـتـعـة داخـل أسـوار مـديـنـتـنـا الـمـلكـية.**
 
-                ◈ **مـعـلـومـات الـدخـول:**
+                ◈ **مـعـلـومـات الـسـجـل:**
                 ┃ 🆔 **الآيدي:** \`${member.id}\`
-                ┃ 📅 **انضمام:** <t:${Math.floor(Date.now() / 1000)}:R>
-                ┃ 🔢 **الرقم:** \`#${member.guild.memberCount}\`
+                ┃ 🔢 **الرقم السكاني:** \`#${member.guild.memberCount}\`
+                ┃ 📅 **تاريخ الدخول:** <t:${Math.floor(Date.now() / 1000)}:f>
 
                 ─── ⋆⋅☆⋅⋆ ───
-                📜 يرجى مراجعة القوانين لتجنب العقوبات.
+                📜 يرجى مراجعة القوانين لتجنب الطرد.
                 🏛️ لأي استفسار، توجه لقسم التذاكر.
             `)
-            .setFooter({ text: `One City RP - Management`, iconURL: member.guild.iconURL() })
+            .setFooter({ text: `One City Management`, iconURL: member.guild.iconURL() })
             .setTimestamp();
 
         await welcomeChan.send({ content: `||${member}||`, embeds: [welcomeEmbed] });
@@ -83,48 +98,47 @@ client.on(Events.GuildMemberAdd, async (member) => {
 client.on(Events.MessageCreate, async (msg) => {
     if (msg.author.bot || !msg.guild) return;
 
-    // حماية الروابط (Kick)
+    // منع الروابط (Kick)
     const linkRegex = /(https?:\/\/|discord\.gg|www\.)/i;
     if (linkRegex.test(msg.content) && !isStaff(msg.member)) {
         await msg.delete().catch(() => {});
         await msg.member.kick("إرسال روابط محظورة").catch(() => {});
+        const logChan = msg.guild.channels.cache.get(CONFIG.LOGS_ID);
+        if (logChan) {
+            const embed = new EmbedBuilder().setTitle('🛡️ حـماية الـمـدينة').setColor("#FF0000")
+                .setDescription(`👤 **الـلاعب:** ${msg.author.tag}\n🆔 **الآيدي:** \`${msg.author.id}\`\n⚠️ **الـمخالفة:** إرسـال روابـط\n⚖️ **الإجراء:** طرد (Kick)` );
+            await logChan.send({ embeds: [embed] });
+        }
         return;
     }
 
-    // أوامر الإدارة الصويتة
-    const args = msg.content.split(' ');
-    const command = args[0].toLowerCase();
-
-    if (command === '!move' && isStaff(msg.member)) {
+    // أوامر Move و Disconnect
+    if (msg.content.startsWith('!move') && isStaff(msg.member)) {
         const target = msg.mentions.members.first();
-        const channel = msg.mentions.channels.first() || msg.guild.channels.cache.get(args[2]);
+        const channel = msg.mentions.channels.first();
         if (target && channel && channel.type === ChannelType.GuildVoice) {
             await target.voice.setChannel(channel);
-            msg.reply(`✅ تم نقل **${target.user.username}** إلى **${channel.name}** بنجاح.`);
-        } else {
-            msg.reply(`❌ يرجى منشن العضو ثم تحديد الروم الصوتي. مثال: \`!move @عضو #روم\``);
+            msg.reply(`✅ تم نقل **${target.user.username}** إلى **${channel.name}**.`);
         }
     }
 
-    if (command === '!dc' && isStaff(msg.member)) {
+    if (msg.content.startsWith('!dc') && isStaff(msg.member)) {
         const target = msg.mentions.members.first();
         if (target && target.voice.channel) {
             await target.voice.disconnect();
-            msg.reply(`✅ تم طرد **${target.user.username}** من الروم الصوتي.`);
-        } else {
-            msg.reply(`❌ العضو ليس متواجداً في روم صوتي.`);
+            msg.reply(`✅ تم فصل **${target.user.username}** من الروم الصوتي.`);
         }
     }
 });
 
 client.on(Events.InteractionCreate, async (int) => {
     
-    // 1. لوحة الـ Setup الملكية الفخمة
+    // 1. لوحة الـ Setup الملكية
     if (int.isChatInputCommand() && int.commandName === 'setup') {
-        if (!CONFIG.AUTH_USERS.includes(int.user.id)) return int.reply({ content: "❌ إدارة عليا فقط", ephemeral: true });
+        if (!CONFIG.OWNER_IDS.includes(int.user.id)) return int.reply({ content: "❌ إدارة عليا فقط", ephemeral: true });
 
         const mainEmbed = new EmbedBuilder()
-            .setAuthor({ name: 'ONE CITY ROLEPLAY | الـقـيادة الـعـلـيـا لـلـمـديـنـة', iconURL: int.guild.iconURL() })
+            .setAuthor({ name: 'ONE CITY ROLEPLAY | الـقـيادة الـعـلـيـا', iconURL: int.guild.iconURL() })
             .setTitle('🏛️ الـمـركـز الإداري والـقـضـائـي الـمـوحـد')
             .setDescription(`
                 ╭─── · · 🏛️ · · ───╮
@@ -136,7 +150,7 @@ client.on(Events.InteractionCreate, async (int) => {
                 ┃ إذا كـنـت تـبـحـث عـن الإنـصـاف أو الـدعم، فـأنت فـي
                 ┃ الـمـكـان الـصـحـيـح. يـرجى اخـتـيار الـديـوان الـمـنـاسب:
 
-                ◈ **الـدوائـر الإداريـة الـمـتـاحـة:**
+                ◈ **الـخـدمـات الإداريـة الـمـتـوفـرة:**
                 
                 🟢 **ديـوان الـنـزاعات الـعـامـة (لاعب)**
                 🔴 **ديـوان الـمـظالـم الـعـلـيـا (إداري)**
@@ -157,12 +171,12 @@ client.on(Events.InteractionCreate, async (int) => {
         return int.reply({ embeds: [mainEmbed], components: [buttons] });
     }
 
-    // 2. المودال المحسن
+    // 2. المودال (الاستمارة الفخمة)
     if (int.isButton() && int.customId.startsWith('op_')) {
         const modal = new ModalBuilder().setCustomId(`m_${int.customId}`).setTitle('إسـتـمـارة الـطـلـب الـرسـمـيـة');
         modal.addComponents(
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('i1').setLabel("الاسم (مثال: Jaber)").setStyle(TextInputStyle.Short).setRequired(true)),
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('i2').setLabel("شرح المشكلة بالتفصيل").setStyle(TextInputStyle.Paragraph).setRequired(true))
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('i1').setLabel("الأسم (مثال: Jaber)").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('i2').setLabel("شرح المشكلة (بالتفصيل)").setStyle(TextInputStyle.Paragraph).setRequired(true))
         );
         return int.showModal(modal);
     }
@@ -176,25 +190,27 @@ client.on(Events.InteractionCreate, async (int) => {
 
         let set = { label: "TICKET", color: "#FFFFFF", roles: [] };
         if (type === 'player') set = { label: "PLAYER", color: "#00FF00", roles: CONFIG.PLAYER_ROLES };
-        else if (type === 'staff') set = { label: "STAFF", color: "#FF0000", roles: CONFIG.STAFF_ROLES };
+        else if (type === 'staff') set = { label: "STAFF", color: "#FF0000", roles: CONFIG.STAFF_REPORT_ROLES };
         else set = { label: "TECH", color: "#1A1A1A", roles: CONFIG.TECH_ROLES };
 
         const ticketNum = Math.floor(1000 + Math.random() * 9000);
         const channel = await int.guild.channels.create({
             name: `${set.label.toLowerCase()}-${ticketNum}`,
             parent: CONFIG.CATEGORY_ID,
+            type: ChannelType.GuildText,
             permissionOverwrites: [
                 { id: int.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
                 { id: int.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-                ...set.roles.map(rid => ({ id: rid, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
+                ...set.roles.map(rid => ({ id: rid, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] })),
+                ...CONFIG.OWNER_IDS.map(uid => ({ id: uid, allow: [PermissionsBitField.Flags.ViewChannel] }))
             ]
         });
 
         const welcomeEmbed = new EmbedBuilder()
             .setAuthor({ name: `طـلـب مـواطـن: ${int.user.username}`, iconURL: int.user.displayAvatarURL({ dynamic: true }) })
+            .setThumbnail(int.user.displayAvatarURL({ dynamic: true }))
             .setTitle(`🏛️ ديـوان الـخدمـة | ${set.label} #${ticketNum}`)
             .setColor(set.color)
-            .setThumbnail(int.user.displayAvatarURL({ dynamic: true }))
             .setDescription(`◈ **بـيـانـات مـقـدم الـطـلـب**\n┃ 👤 **الأسـم:** \`${f1}\`\n┃ 🆔 **الـهـويـة:** ${int.user}\n┃ 🔢 **الـتـسـلـسـل:** \`#${ticketNum}\`\n\n◈ **مـوضـوع الـطـلـب**\n┃ \`\`\`${f2}\`\`\`\n─── ⋆⋅☆⋅⋆ ───\n*بـانـتـظار مـعـالـجـة الـمـوظف الـمـسؤول.*`);
 
         const row = new ActionRowBuilder().addComponents(
@@ -206,15 +222,15 @@ client.on(Events.InteractionCreate, async (int) => {
         return int.editReply(`✅ تم فتح طلبك بنجاح: ${channel}`);
     }
 
-    // 4. حماية الأزرار
+    // 4. حماية الأزرار (إدارة فقط)
     if (int.isButton() && (int.customId === 'claim_tk' || int.customId === 'register_tk' || int.customId.startsWith('rate_'))) {
         if (!isStaff(int.member)) return int.reply({ content: "⚠️ هذا الزر مخصص لطاقم الإدارة فقط.", ephemeral: true });
     }
 
-    // 5. الاستلام والأرشفة
+    // 5. الاستلام والتقييم
     if (int.isButton() && int.customId === 'claim_tk') {
         const claimEmbed = EmbedBuilder.from(int.message.embeds[0])
-            .addFields({ name: '👮 الـموظـف الـمسؤول:', value: `┃ ${int.user}`, inline: false }).setColor("#5865F2");
+            .addFields({ name: '👮 الـمسؤول الـحـالـي:', value: `┃ ${int.user}`, inline: false }).setColor("#5865F2");
         await int.update({ embeds: [claimEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('register_tk').setLabel('تسجيل وإغلاق').setStyle(ButtonStyle.Danger))] });
     }
 
@@ -223,12 +239,13 @@ client.on(Events.InteractionCreate, async (int) => {
             new ButtonBuilder().setCustomId('rate_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId('rate_1').setLabel('⭐').setStyle(ButtonStyle.Danger)
         );
-        return int.reply({ content: "⭐ يـرجـى تـقـيـيـم خـدمـتـنا قـبـل الإغـلاق نـهـائـيـاً:", components: [stars] });
+        return int.reply({ content: "⭐ **يـرجـى تـقـيـيـم خـدمـتـنا قـبـل الإغـلاق نـهـائـيـاً:**", components: [stars] });
     }
 
+    // 6. الأرشفة العمودية المزخرفة (بدون ملفات)
     if (int.isButton() && int.customId.startsWith('rate_')) {
         const rating = int.customId === 'rate_5' ? '⭐⭐⭐⭐⭐' : '⭐';
-        await int.update({ content: '🔒 جـاري الأرشفـة والـحـذف...', components: [] });
+        await int.update({ content: '🔒 **جـاري الـتـسجـيل والأرشفـة...**', components: [] });
 
         const msgs = await int.channel.messages.fetch({ limit: 50 });
         const history = msgs.reverse().filter(m => !m.author.bot).map(m => `┃ **${m.author.username}**: ${m.content}`).join('\n');
@@ -242,12 +259,12 @@ client.on(Events.InteractionCreate, async (int) => {
                     ◈ **تـفـاصـيـل الأرشـيـف الـعـمـودي**
                     ┃
                     ┃ 📄 **الـقـسم:** \`${int.channel.name.split('-')[0].toUpperCase()}\`
-                    ┃ 🆔 **الـتـسـلـسـل:** \`#${int.channel.name.split('-')[1]}\`
+                    ┃ 🔢 **الـرقـم:** \`#${int.channel.name.split('-')[1]}\`
                     ┃ 👤 **الـمُـغـلـق:** ${int.user}
                     ┃ 🎖️ **الرتب:** \`${int.member.roles.cache.map(r => r.name).join(', ')}\`
                     ┃ ⭐ **الـتـقـيـيـم:** ${rating}
                     ┃
-                    ◈ **سـجـل الـمـحـادثـة**
+                    ◈ **سـجـل الـمـحـادثـة الـمـؤرشف**
                     ┃
                     ${history.substring(0, 1800)}
                     ┃
