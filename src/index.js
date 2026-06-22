@@ -1,7 +1,7 @@
 const { 
     Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, 
     ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, 
-    PermissionsBitField, ChannelType 
+    PermissionsBitField, ChannelType, Events 
 } = require('discord.js');
 
 const client = new Client({
@@ -13,7 +13,7 @@ const client = new Client({
     ]
 });
 
-// --- الإعدادات الخاصة بك ---
+// --- الإعدادات (تأكد من دقتها) ---
 const CONFIG = {
     TOKEN: process.env.TOKEN,
     GUILD_ID: "1381360453485334658",
@@ -24,22 +24,29 @@ const CONFIG = {
     TECH_ROLE: "1517931445149241356"
 };
 
-// تشغيل البوت وتسجيل أمر setup فقط
-client.once('ready', async () => {
-    console.log(`✅ ${client.user.tag} Is Online!`);
+// استخدام حدث ClientReady لإزالة التحذير
+client.once(Events.ClientReady, async (c) => {
+    console.log(`✅ ${c.user.tag} جاهز للعمل على السيرفر!`);
+    
     const guild = client.guilds.cache.get(CONFIG.GUILD_ID);
     if (guild) {
-        // تسجيل أمر السيت اب فقط
-        await guild.commands.set([{
-            name: 'setup',
-            description: 'إنشاء لوحة التحكم الفخمة لمدينة One City RP'
-        }]);
+        try {
+            await guild.commands.set([{
+                name: 'setup',
+                description: 'إنشاء لوحة التحكم الفخمة لمدينة One City RP'
+            }]);
+            console.log('✅ تم تحديث أمر /setup بنجاح.');
+        } catch (err) {
+            console.error('❌ خطأ في تسجيل الأوامر:', err);
+        }
+    } else {
+        console.error('❌ لم يتم العثور على السيرفر! تأكد من صحة الآيدي.');
     }
 });
 
-client.on('interactionCreate', async (int) => {
+client.on(Events.InteractionCreate, async (int) => {
     
-    // 1. تنفيذ أمر /setup
+    // 1. أمر /setup
     if (int.isChatInputCommand() && int.commandName === 'setup') {
         if (!CONFIG.AUTH_USERS.includes(int.user.id)) {
             return int.reply({ content: "❌ عذراً، هذا الأمر مخصص للإدارة العليا فقط.", ephemeral: true });
@@ -67,7 +74,7 @@ client.on('interactionCreate', async (int) => {
                 ─── ⋆⋅☆⋅⋆ ───
                 **تـنـبـيـه:** بـعـد الـضـغـط عـلـى الـزر، يـجـب عـلـيـك تـعبئة بـيـاناتك لـتـتمكن مـن فـتح الـتـذكـرة.
             `)
-            .setColor("#FF0000") // أحمر لامع فخم للوصف
+            .setColor("#FF0000")
             .setThumbnail(int.guild.iconURL({ dynamic: true }))
             .setFooter({ text: 'One City RP | Quality & Professionalism', iconURL: int.guild.iconURL() });
 
@@ -80,34 +87,23 @@ client.on('interactionCreate', async (int) => {
         return int.reply({ embeds: [mainEmbed], components: [buttons] });
     }
 
-    // 2. إظهار المودال عند الضغط على الأزرار
+    // 2. إظهار المودال (الاستمارة)
     if (int.isButton() && ['p_t', 's_t', 't_t'].includes(int.customId)) {
         const modal = new ModalBuilder().setCustomId(`mod_${int.customId}`).setTitle('إسـتـمـارة فـتـح الـتـذكـرة');
         
-        const input1 = new TextInputBuilder()
-            .setCustomId('user_info')
-            .setLabel("الاسم والآيدي الخاص بك")
-            .setPlaceholder('مثال: صقر | 1349')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-        const input2 = new TextInputBuilder()
-            .setCustomId('issue_info')
-            .setLabel("شرح البلاغ أو المشكلة")
-            .setPlaceholder('يرجى كتابة التفاصيل هنا...')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true);
+        const input1 = new TextInputBuilder().setCustomId('u_info').setLabel("الاسم والآيدي الخاص بك").setStyle(TextInputStyle.Short).setRequired(true);
+        const input2 = new TextInputBuilder().setCustomId('u_issue').setLabel("شرح البلاغ أو المشكلة").setStyle(TextInputStyle.Paragraph).setRequired(true);
 
         modal.addComponents(new ActionRowBuilder().addComponents(input1), new ActionRowBuilder().addComponents(input2));
         return int.showModal(modal);
     }
 
-    // 3. معالجة المودال وفتح التذكرة
+    // 3. معالجة المودال وفتح القناة
     if (int.isModalSubmit()) {
         await int.deferReply({ ephemeral: true });
         
-        const uInfo = int.fields.getTextInputValue('user_info');
-        const uIssue = int.fields.getTextInputValue('issue_info');
+        const uInfo = int.fields.getTextInputValue('u_info');
+        const uIssue = int.fields.getTextInputValue('u_issue');
         
         let setup = { label: "تذكرة", color: "#FFFFFF", roles: [] };
         if (int.customId.includes('p_t')) setup = { label: "ضد-لاعب", color: "#00FF00", roles: CONFIG.STAFF_ROLES };
@@ -134,37 +130,34 @@ client.on('interactionCreate', async (int) => {
                     { name: '👤 الـعـضـو:', value: `${int.user} (${uInfo})`, inline: true },
                     { name: '📝 الـمـوضـوع:', value: `\`\`\`${uIssue}\`\`\`` }
                 )
-                .setTimestamp()
-                .setFooter({ text: 'One City RP Support System' });
+                .setTimestamp();
 
-            const closeRow = new ActionRowBuilder().addComponents(
+            const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId('close_now').setLabel('إغلاق التذكرة').setStyle(ButtonStyle.Danger)
             );
 
-            await channel.send({ content: `${int.user} | <@&${setup.roles[0] || CONFIG.AUTH_USERS[0]}>`, embeds: [welcome], components: [closeRow] });
+            await channel.send({ content: `${int.user} | <@&${setup.roles[0] || CONFIG.AUTH_USERS[0]}>`, embeds: [welcome], components: [row] });
             return int.editReply(`✅ تم فتح تذكرتك بنجاح: ${channel}`);
         } catch (e) {
-            return int.editReply("❌ حدث خطأ: تأكد من صلاحيات البوت (Administrator) ووجود الكاتجوري.");
+            console.error(e);
+            return int.editReply("❌ خطأ: تأكد أن رتبة البوت عالية ولديه صلاحية Administrator.");
         }
     }
 
-    // 4. نظام الإغلاق والأرشيف
+    // 4. نظام الإغلاق
     if (int.isButton() && int.customId === 'close_now') {
-        await int.reply("🔒 جاري أرشفة المحادثة وإغلاق القناة...");
+        await int.reply("🔒 جاري الحفظ والإغلاق...");
         const msgs = await int.channel.messages.fetch({ limit: 100 });
-        let logData = `--- ARCHIVE FOR: ${int.channel.name} ---\n\n`;
-        msgs.reverse().forEach(m => {
-            logData += `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}\n`;
-        });
+        let log = msgs.reverse().map(m => `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}`).join('\n');
 
         const logChan = client.channels.cache.get(CONFIG.LOGS);
         if (logChan) {
             await logChan.send({ 
-                content: `📁 **أرشيف تذكرة: \`${int.channel.name}\`**\nتم الإغلاق بواسطة: ${int.user}`,
-                files: [{ attachment: Buffer.from(logData), name: `log-${int.channel.name}.txt` }] 
+                content: `📁 أرشيف تذكرة: ${int.channel.name}`,
+                files: [{ attachment: Buffer.from(log), name: `log-${int.channel.name}.txt` }] 
             });
         }
-        setTimeout(() => int.channel.delete().catch(() => {}), 4000);
+        setTimeout(() => int.channel.delete().catch(() => {}), 3000);
     }
 });
 
