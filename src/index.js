@@ -1,202 +1,115 @@
 const { 
-    Client, 
-    GatewayIntentBits, 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    PermissionsBitField,
-    ChannelType,
-    REST,
-    Routes
+    Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, 
+    ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, 
+    PermissionsBitField, ChannelType, REST, Routes 
 } = require('discord.js');
 
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers
-    ]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers]
 });
 
-// --- الإعدادات النهائية بأيدياتك الصحيحة ---
+// --- الإعدادات الثابتة ---
 const CONFIG = {
-    TOKEN: process.env.TOKEN || "ضع_توكن_البوت_هنا",
-    CLIENT_ID: "1381360453485334658", 
+    TOKEN: process.env.TOKEN,
+    CLIENT_ID: "1381360453485334658",
     GUILD_ID: "1381360453485334658",
-    
-    // الأيديات المسموح لها باستخدام أمر الـ Setup
-    AUTHORIZED_USERS: [
-        "1349214233262297149", // الآيدي الجديد الخاص بك
-        "1517002644676411592"  
-    ],
-
-    CATEGORY_TICKETS: "1517931717061771294",
-    LOG_CHANNEL: "1517942325383270502",
-    
-    // من يرى بلاغات اللاعبين والإداريين
-    STAFF_ROLES: [
-        "1517002645666267197",
-        "1517931426069348446",
-        "1517931427600007258",
-        "1517931425372962947"
-    ],
-    
-    // من يرى الدعم الفني
+    AUTH_USERS: ["1349214233262297149", "1517002644676411592"],
+    CATEGORY: "1517931717061771294",
+    LOGS: "1517942325383270502",
+    STAFF_ROLES: ["1517002645666267197", "1517931426069348446", "1517931427600007258", "1517931425372962947"],
     TECH_ROLE: "1517931445149241356"
 };
 
-const commands = [{
-    name: 'setup',
-    description: 'تجهيز لوحة تذاكر مدينة One City RP'
-}];
-
-const rest = new REST({ version: '10' }).setToken(CONFIG.TOKEN);
-
 client.once('ready', async () => {
-    console.log(`✅ تم التشغيل بنجاح | المالك الحالي: Mad Max`);
+    const rest = new REST({ version: '10' }).setToken(CONFIG.TOKEN);
     try {
-        await rest.put(Routes.applicationGuildCommands(client.user.id, CONFIG.GUILD_ID), { body: commands });
-        console.log('✅ تم تسجيل أوامر الـ Slash بنجاح');
-    } catch (error) {
-        console.error(error);
-    }
+        await rest.put(Routes.applicationGuildCommands(CONFIG.CLIENT_ID, CONFIG.GUILD_ID), {
+            body: [{ name: 'setup', description: 'تجهيز لوحة تذاكر One City RP' }]
+        });
+        console.log('✅ Bot is Online & Commands Registered');
+    } catch (e) { console.error(e); }
 });
 
-client.on('interactionCreate', async (interaction) => {
-    
-    // 1. أمر السيت اب (Setup)
-    if (interaction.isChatInputCommand() && interaction.commandName === 'setup') {
-        if (!CONFIG.AUTHORIZED_USERS.includes(interaction.user.id)) {
-            return interaction.reply({ content: "❌ عذراً، هذا الأمر مخصص للإدارة العليا فقط.", ephemeral: true });
-        }
+client.on('interactionCreate', async (int) => {
+    // 1. استجابة فورية لأمر Setup
+    if (int.isChatInputCommand() && int.commandName === 'setup') {
+        if (!CONFIG.AUTH_USERS.includes(int.user.id)) return int.reply({ content: "❌ إدارة عليا فقط", ephemeral: true });
 
-        const mainEmbed = new EmbedBuilder()
+        const embed = new EmbedBuilder()
             .setTitle("🌆 **ONE CITY ROLEPLAY | الـدعم الـفـنـي**")
-            .setDescription(`
-                \n**أهـلاً بـك فـي مـديـنـة One City.. حـيـث لـلـواقـعـيـة مـعـنى آخـر**\n
-                نـحـن هـنـا لـنـسـمـعـك، نـسـاعـدك، ونـضـمـن لـك بـيـئـة لـعـب عـادلة ومـحـتـرفـة.
-                اخـتـر الـقـسم الـمـنـاسب لـحـالـتـك وسـيـتـم الـرد عـلـيـك مـن قـبـل الـمـخـتـصـيـن:\n
-                🟢 **بـلاغ ضـد لاعـب**
-                *لـتـقـديـم شكوى بـخـصوص مـخـالـفات الـقوانين داخـل الـمدينة.*
-
-                🔴 **بـلاغ ضـد إداري**
-                *لـلـتواصل مع الإدارة الـعـلـيا بـشأن أي مـلاحظات عـلى طـاقم الـعمل.*
-
-                ⚫ **الـدعم الـفـنـي**
-                *لـلـمساعدة في الـمشاكل الـتـقنية، الـبـوقات، أو الاسـتـفسارات.*
-                \n─── ⋆⋅☆⋅⋆ ───
-                **تـنـبـيـه:** بـعـد الضـغـط عـلـى الـزر، سـيـطـلـب مـنـك الـبوت إدخـال بـيـانـاتـك.
-            `)
-            .setColor("#FF0000") // أحمر لامع فخم
-            .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
-            .setFooter({ text: "One City RP Management", iconURL: interaction.guild.iconURL() });
+            .setDescription(`\n**مـرحـباً بـك فـي مـديـنـة One City**\n\n🟢 **بـلاغ ضـد لاعـب**\n🔴 **بـلاغ ضـد إداري**\n⚫ **الـدعم الـفـنـي**\n\n*اضغط على الزر المناسب وسيفتح لك نموذج تعبئة البيانات.*`)
+            .setColor("#FF0000").setFooter({ text: "One City RP Management" });
 
         const buttons = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('op_player').setLabel('ضد لاعب').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('op_staff').setLabel('ضد اداري').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('op_tech').setLabel('الدعم الفني').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('p_t').setLabel('ضد لاعب').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('s_t').setLabel('ضد اداري').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('t_t').setLabel('الدعم الفني').setStyle(ButtonStyle.Secondary)
         );
 
-        return interaction.reply({ embeds: [mainEmbed], components: [buttons] });
+        return int.reply({ embeds: [embed], components: [buttons] });
     }
 
-    // 2. إظهار المودال (الاستمارة)
-    if (interaction.isButton() && interaction.customId.startsWith('op_')) {
-        const modal = new ModalBuilder()
-            .setCustomId(`modal_${interaction.customId}`)
-            .setTitle('نـمـوذج فـتـح تـذكـرة');
-
-        const nameInput = new TextInputBuilder()
-            .setCustomId('field_1')
-            .setLabel("الاسم والآيدي الخاص بك")
-            .setPlaceholder("مثال: احمد | 1349")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-        const reasonInput = new TextInputBuilder()
-            .setCustomId('field_2')
-            .setLabel("شرح المشكلة أو البلاغ")
-            .setPlaceholder("اكتب تفاصيل ما حدث هنا...")
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true);
-
-        modal.addComponents(new ActionRowBuilder().addComponents(nameInput), new ActionRowBuilder().addComponents(reasonInput));
-        return interaction.showModal(modal);
-    }
-
-    // 3. معالجة المودال وفتح القناة
-    if (interaction.isModalSubmit()) {
-        await interaction.deferReply({ ephemeral: true });
-
-        const uName = interaction.fields.getTextInputValue('field_1');
-        const uReason = interaction.fields.getTextInputValue('field_2');
-        const type = interaction.customId;
-
-        let settings = { name: "تذكرة", color: "#FFFFFF", roles: [] };
-
-        if (type.includes('player')) {
-            settings = { name: "ضد-لاعب", color: "#00FF00", roles: CONFIG.STAFF_ROLES };
-        } else if (type.includes('staff')) {
-            settings = { name: "ضد-اداري", color: "#FF0000", roles: CONFIG.STAFF_ROLES };
-        } else {
-            settings = { name: "دعم-فني", color: "#000000", roles: [CONFIG.TECH_ROLE] };
-        }
-
-        const ticketChannel = await interaction.guild.channels.create({
-            name: `${settings.name}-${interaction.user.username}`,
-            type: ChannelType.GuildText,
-            parent: CONFIG.CATEGORY_TICKETS,
-            permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles] },
-                ...settings.roles.map(r => ({ id: r, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] })),
-                ...CONFIG.AUTHORIZED_USERS.map(u => ({ id: u, allow: [PermissionsBitField.Flags.ViewChannel] }))
-            ]
-        });
-
-        const welcomeEmbed = new EmbedBuilder()
-            .setTitle(`🎫 تذكرة جديدة | ${settings.name}`)
-            .setColor(settings.color)
-            .addFields(
-                { name: "👤 العضو:", value: `${interaction.user} (${uName})`, inline: true },
-                { name: "📝 الموضوع:", value: uReason }
-            )
-            .setTimestamp()
-            .setFooter({ text: "One City RP Ticket System" });
-
-        const closeBtn = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('close_ticket_now').setLabel('إغلاق وحفظ المحادثة').setStyle(ButtonStyle.Danger)
-        );
-
-        await ticketChannel.send({ content: `@here`, embeds: [welcomeEmbed], components: [closeBtn] });
-        return interaction.editReply(`✅ تم إنشاء تذكرتك بنجاح: ${ticketChannel}`);
-    }
-
-    // 4. نظام الإغلاق والأرشفة النصية
-    if (interaction.isButton() && interaction.customId === 'close_ticket_now') {
-        const channel = interaction.channel;
-        await interaction.reply("🔒 جاري حفظ نسخة من المحادثة وإغلاق القناة...");
-
-        const messages = await channel.messages.fetch({ limit: 100 });
-        let logStream = `--- LOG ARCHIVE FOR: ${channel.name} ---\n\n`;
+    // 2. استجابة فورية للأزرار (بدون تفكير)
+    if (int.isButton() && (int.customId === 'p_t' || int.customId === 's_t' || int.customId === 't_t')) {
+        const modal = new ModalBuilder().setCustomId(`mod_${int.customId}`).setTitle('تعبئة بيانات التذكرة');
+        const input1 = new TextInputBuilder().setCustomId('name').setLabel("الاسم والآيدي").setStyle(TextInputStyle.Short).setRequired(true);
+        const input2 = new TextInputBuilder().setCustomId('reason').setLabel("السبب").setStyle(TextInputStyle.Paragraph).setRequired(true);
         
-        messages.reverse().forEach(m => {
-            logStream += `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}\n`;
-        });
+        modal.addComponents(new ActionRowBuilder().addComponents(input1), new ActionRowBuilder().addComponents(input2));
+        return int.showModal(modal); // يظهر المودال فوراً
+    }
 
-        const logChannel = client.channels.cache.get(CONFIG.LOG_CHANNEL);
-        if (logChannel) {
-            await logChannel.send({ content: `📁 **أرشيف تذكرة مغلقة**\nالقناة: \`${channel.name}\`\nالمسؤول: ${interaction.user}` });
-            // إرسال النص (بحد أقصى 2000 حرف للرسالة الواحدة)
-            await logChannel.send({ content: `\`\`\`text\n${logStream.substring(0, 1900)}\n\`\`\`` });
+    // 3. معالجة إرسال البيانات (المودال)
+    if (int.isModalSubmit()) {
+        await int.deferReply({ ephemeral: true }); // رد مخفي فوراً لكسر حالة "Thinking"
+
+        const name = int.fields.getTextInputValue('name');
+        const reason = int.fields.getTextInputValue('reason');
+        const type = int.customId;
+
+        let setup = { label: "تذكرة", color: "#FFFFFF", roles: [] };
+        if (type.includes('p_t')) setup = { label: "لاعب", color: "#00FF00", roles: CONFIG.STAFF_ROLES };
+        else if (type.includes('s_t')) setup = { label: "اداري", color: "#FF0000", roles: CONFIG.STAFF_ROLES };
+        else setup = { label: "دعم-فني", color: "#1A1A1A", roles: [CONFIG.TECH_ROLE] };
+
+        try {
+            const channel = await int.guild.channels.create({
+                name: `${setup.label}-${int.user.username}`,
+                parent: CONFIG.CATEGORY,
+                permissionOverwrites: [
+                    { id: int.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                    { id: int.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles] },
+                    ...setup.roles.map(r => ({ id: r, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] })),
+                    ...CONFIG.AUTH_USERS.map(u => ({ id: u, allow: [PermissionsBitField.Flags.ViewChannel] }))
+                ]
+            });
+
+            const welcome = new EmbedBuilder()
+                .setTitle(`🎫 تذكرة جديدة: ${setup.label}`)
+                .setColor(setup.color)
+                .addFields({ name: "👤 العضو:", value: `${int.user} (${name})` }, { name: "📝 السبب:", value: reason });
+
+            const closeBtn = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('close').setLabel('إغلاق').setStyle(ButtonStyle.Danger));
+
+            await channel.send({ content: `@here`, embeds: [welcome], components: [closeBtn] });
+            return int.editReply(`✅ تم فتح تذكرتك: ${channel}`);
+        } catch (e) {
+            return int.editReply("❌ حدث خطأ أثناء إنشاء القناة، تأكد من صلاحيات البوت.");
         }
+    }
 
-        setTimeout(() => channel.delete().catch(() => {}), 5000);
+    // 4. إغلاق فوري وأرشفة نصية
+    if (int.isButton() && int.customId === 'close') {
+        await int.reply("🔒 يتم الحفظ والحذف...");
+        const msgs = await int.channel.messages.fetch({ limit: 100 });
+        let log = `Archive: ${int.channel.name}\n\n` + msgs.reverse().map(m => `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}`).join('\n');
+
+        const logChan = client.channels.cache.get(CONFIG.LOGS);
+        if (logChan) {
+            await logChan.send({ content: `📁 أرشيف التذكرة: ${int.channel.name}` });
+            await logChan.send({ content: `\`\`\`text\n${log.substring(0, 1900)}\n\`\`\`` });
+        }
+        setTimeout(() => int.channel.delete(), 3000);
     }
 });
 
