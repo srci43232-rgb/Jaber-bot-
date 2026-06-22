@@ -13,151 +13,186 @@ const client = new Client({
     ]
 });
 
-// --- الإعدادات (تأكد من دقتها) ---
+// --- الإعدادات الخاصة بك ---
 const CONFIG = {
     TOKEN: process.env.TOKEN,
     GUILD_ID: "1381360453485334658",
     AUTH_USERS: ["1349214233262297149", "1517002644676411592"], 
-    CATEGORY: "1517931717061771294", 
-    LOGS: "1517942325383270502", 
+    CATEGORY_ID: "1517931717061771294", 
+    LOGS_ID: "1517942325383270502", 
     STAFF_ROLES: ["1517002645666267197", "1517931426069348446", "1517931427600007258", "1517931425372962947"],
-    TECH_ROLE: "1517931445149241356"
+    TECH_ROLE_ID: "1517931445149241356"
 };
 
-// استخدام حدث ClientReady لإزالة التحذير
 client.once(Events.ClientReady, async (c) => {
-    console.log(`✅ ${c.user.tag} جاهز للعمل على السيرفر!`);
-    
+    console.log(`✅ ${c.user.tag} متصل وجاهز!`);
     const guild = client.guilds.cache.get(CONFIG.GUILD_ID);
     if (guild) {
-        try {
-            await guild.commands.set([{
-                name: 'setup',
-                description: 'إنشاء لوحة التحكم الفخمة لمدينة One City RP'
-            }]);
-            console.log('✅ تم تحديث أمر /setup بنجاح.');
-        } catch (err) {
-            console.error('❌ خطأ في تسجيل الأوامر:', err);
-        }
-    } else {
-        console.error('❌ لم يتم العثور على السيرفر! تأكد من صحة الآيدي.');
+        await guild.commands.set([{ name: 'setup', description: 'تجهيز لوحة تذاكر One City RP' }]);
     }
 });
 
 client.on(Events.InteractionCreate, async (int) => {
     
-    // 1. أمر /setup
+    // 1. أمر Setup الفخم
     if (int.isChatInputCommand() && int.commandName === 'setup') {
-        if (!CONFIG.AUTH_USERS.includes(int.user.id)) {
-            return int.reply({ content: "❌ عذراً، هذا الأمر مخصص للإدارة العليا فقط.", ephemeral: true });
-        }
+        if (!CONFIG.AUTH_USERS.includes(int.user.id)) return int.reply({ content: "❌ للإدارة العليا فقط", ephemeral: true });
 
         const mainEmbed = new EmbedBuilder()
-            .setAuthor({ name: 'ONE CITY ROLEPLAY | مـركـز الـدعم والـبـلاغـات', iconURL: int.guild.iconURL() })
-            .setTitle('🌆 نـظام الـتـذاكـر الـمـوحـد لـلـمـديـنـة')
+            .setAuthor({ name: 'ONE CITY ROLEPLAY | المـركـز الـمـوحـد لـلـبـلاغـات', iconURL: int.guild.iconURL() })
+            .setTitle('🌆 نـظام الـتـواصل الإداري والـفـني الـمـتـطور')
             .setDescription(`
-                > **مـرحـباً بـك فـي مـديـنـة One City.. حـيـث نـصـنع الـواقـع**
+                > **أهـلاً بـك فـي مـديـنـة One City.. حـيـث نـصـنع الـواقـع**
                 
-                نـحن هـنا لـنوفـر لـك أفـضل بـيئة لـعب مـمكنة. إذا كـنت تـواجـه أي مـشكلة أو تـود تـقديم بـلاغ، يـرجى اخـتـيار الـقـسم الـمـنـاسب أدناه:
+                لـضمان تـجربة لـعب عـادلة ونـقية مـن الـمـخالـفات، وفـرنا لـكم هـذا الـنظام الـمـتـكامل. يـرجى اخـتـيار الـقـسم الـمـنـاسب لـحـالـتـك لـيتم مـعـالـجـتها مـن قـبـل الـمـختـصين.
 
-                **『 الأقـسـام الـمـتـوفـرة 』**
+                **『 الـخـدمات الـمـتـوفـرة 』**
                 
                 🟢 **بـلاغ ضـد لاعـب**
-                *لـلإبـلاغ عـن مـخـالـفي الـقـوانـين داخـل الـمـديـنة.*
+                *لـلإبلاغ عـن مـخالـفة قـوانـين أو سـلوك غـير لائـق.*
                 
                 🔴 **بـلاغ ضـد إداري**
-                *لـلـتـواصـل مـع الإدارة الـعـلـيـا بـخـصـوص طـاقـم الـعـمـل.*
+                *لـلـشكاوي الـموجـهة للإدارة الـعـلـيـا بـخـصـوص طـاقـم الـعـمـل.*
                 
                 ⚫ **الـدعم الـفـنـي الـعـام**
-                *لـلـمـساعدة الـتـقـنـية، الـتـعـويضـات، والاسـتـفسـارات.*
+                *لـلـمـساعدة، الـبوقات، الـتعـويضـات، أو الاسـتـفـسارات.*
 
                 ─── ⋆⋅☆⋅⋆ ───
-                **تـنـبـيـه:** بـعـد الـضـغـط عـلـى الـزر، يـجـب عـلـيـك تـعبئة بـيـاناتك لـتـتمكن مـن فـتح الـتـذكـرة.
+                **مـلاحـظـة:** كـل قـسم يـحتوي عـلى نـمـوذج بـيـانـات خـاص يـجب تـعبئـته بدقة.
             `)
-            .setColor("#FF0000")
+            .setColor("#FF0000") // أحمر لامع
             .setThumbnail(int.guild.iconURL({ dynamic: true }))
-            .setFooter({ text: 'One City RP | Quality & Professionalism', iconURL: int.guild.iconURL() });
+            .setFooter({ text: 'One City RP | Professionalism & Quality', iconURL: int.guild.iconURL() });
 
         const buttons = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('p_t').setLabel('ضد لاعب').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('s_t').setLabel('ضد اداري').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('t_t').setLabel('الدعم الفني').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('ticket_player').setLabel('ضد لاعب').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('ticket_staff').setLabel('ضد اداري').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('ticket_tech').setLabel('الدعم الفني').setStyle(ButtonStyle.Secondary)
         );
 
         return int.reply({ embeds: [mainEmbed], components: [buttons] });
     }
 
-    // 2. إظهار المودال (الاستمارة)
-    if (int.isButton() && ['p_t', 's_t', 't_t'].includes(int.customId)) {
-        const modal = new ModalBuilder().setCustomId(`mod_${int.customId}`).setTitle('إسـتـمـارة فـتـح الـتـذكـرة');
-        
-        const input1 = new TextInputBuilder().setCustomId('u_info').setLabel("الاسم والآيدي الخاص بك").setStyle(TextInputStyle.Short).setRequired(true);
-        const input2 = new TextInputBuilder().setCustomId('u_issue').setLabel("شرح البلاغ أو المشكلة").setStyle(TextInputStyle.Paragraph).setRequired(true);
+    // 2. إظهار النماذج الفخمة (Modals)
+    if (int.isButton()) {
+        if (int.customId === 'ticket_player') {
+            const modal = new ModalBuilder().setCustomId('mod_player').setTitle('بلاغ سلوك غير لائق / مخالفة');
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('p_name').setLabel("الاسم والآيدي الخاص بك").setStyle(TextInputStyle.Short).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('p_target').setLabel("آيدي الشخص المُبلغ عنه").setStyle(TextInputStyle.Short).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('p_type').setLabel("نوع المخالفة (VDM, RDM, الخ...)").setStyle(TextInputStyle.Short).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('p_details').setLabel("شرح الواقعة بالتفصيل").setStyle(TextInputStyle.Paragraph).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('p_proof').setLabel("رابط الدليل (فيديو/صورة)").setPlaceholder("https://...").setStyle(TextInputStyle.Short).setRequired(true))
+            );
+            return int.showModal(modal);
+        }
 
-        modal.addComponents(new ActionRowBuilder().addComponents(input1), new ActionRowBuilder().addComponents(input2));
-        return int.showModal(modal);
+        if (int.customId === 'ticket_staff') {
+            const modal = new ModalBuilder().setCustomId('mod_staff').setTitle('شكوى إدارية رسمية');
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('s_name').setLabel("الاسم والآيدي الخاص بك").setStyle(TextInputStyle.Short).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('s_target').setLabel("اسم الإداري المعني بالشكوى").setStyle(TextInputStyle.Short).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('s_details').setLabel("وصف الموقف وما حدث بالتفصيل").setStyle(TextInputStyle.Paragraph).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('s_proof').setLabel("رابط الدليل (إن وجد)").setStyle(TextInputStyle.Short).setRequired(false))
+            );
+            return int.showModal(modal);
+        }
+
+        if (int.customId === 'ticket_tech') {
+            const modal = new ModalBuilder().setCustomId('mod_tech').setTitle('طلب دعم فني / تعويض');
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('t_name').setLabel("الاسم والآيدي الخاص بك").setStyle(TextInputStyle.Short).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('t_type').setLabel("نوع المشكلة (بوق، تعويض، استفسار)").setStyle(TextInputStyle.Short).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('t_details').setLabel("شرح المشكلة أو العناصر المفقودة").setStyle(TextInputStyle.Paragraph).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('t_proof').setLabel("رابط الدليل (إلزامي للتعويضات)").setStyle(TextInputStyle.Short).setRequired(false))
+            );
+            return int.showModal(modal);
+        }
     }
 
-    // 3. معالجة المودال وفتح القناة
+    // 3. معالجة إرسال البيانات وفتح التذكرة
     if (int.isModalSubmit()) {
         await int.deferReply({ ephemeral: true });
         
-        const uInfo = int.fields.getTextInputValue('u_info');
-        const uIssue = int.fields.getTextInputValue('u_issue');
-        
-        let setup = { label: "تذكرة", color: "#FFFFFF", roles: [] };
-        if (int.customId.includes('p_t')) setup = { label: "ضد-لاعب", color: "#00FF00", roles: CONFIG.STAFF_ROLES };
-        else if (int.customId.includes('s_t')) setup = { label: "ضد-اداري", color: "#FF0000", roles: CONFIG.STAFF_ROLES };
-        else setup = { label: "دعم-فني", color: "#2B2D31", roles: [CONFIG.TECH_ROLE] };
+        let setup = { label: "تذكرة", color: "#FFFFFF", roles: CONFIG.STAFF_ROLES, fields: [] };
+
+        if (int.customId === 'mod_player') {
+            setup = { 
+                label: "بلاغ-لاعب", color: "#00FF00", roles: CONFIG.STAFF_ROLES,
+                fields: [
+                    { name: '👤 صاحب البلاغ:', value: int.fields.getTextInputValue('p_name'), inline: true },
+                    { name: '🆔 آيدي المُبلغ عنه:', value: int.fields.getTextInputValue('p_target'), inline: true },
+                    { name: '⚖️ نوع المخالفة:', value: int.fields.getTextInputValue('p_type'), inline: true },
+                    { name: '📝 التفاصيل:', value: `\`\`\`${int.fields.getTextInputValue('p_details')}\`\`\`` },
+                    { name: '🎬 الدليل:', value: int.fields.getTextInputValue('p_proof') }
+                ]
+            };
+        } else if (int.customId === 'mod_staff') {
+            setup = { 
+                label: "شكوى-إدارية", color: "#FF0000", roles: CONFIG.STAFF_ROLES,
+                fields: [
+                    { name: '👤 صاحب الشكوى:', value: int.fields.getTextInputValue('s_name'), inline: true },
+                    { name: '👮 الإداري المعني:', value: int.fields.getTextInputValue('s_target'), inline: true },
+                    { name: '📝 الموقف:', value: `\`\`\`${int.fields.getTextInputValue('s_details')}\`\`\`` },
+                    { name: '🎬 الدليل:', value: int.fields.getTextInputValue('s_proof') || "لا يوجد" }
+                ]
+            };
+        } else if (int.customId === 'mod_tech') {
+            setup = { 
+                label: "دعم-فني", color: "#000000", roles: [CONFIG.TECH_ROLE_ID],
+                fields: [
+                    { name: '👤 صاحب الطلب:', value: int.fields.getTextInputValue('t_name'), inline: true },
+                    { name: '🛠️ نوع الطلب:', value: int.fields.getTextInputValue('t_type'), inline: true },
+                    { name: '📝 الشرح:', value: `\`\`\`${int.fields.getTextInputValue('t_details')}\`\`\`` },
+                    { name: '🎬 الدليل:', value: int.fields.getTextInputValue('t_proof') || "لا يوجد" }
+                ]
+            };
+        }
 
         try {
             const channel = await int.guild.channels.create({
                 name: `${setup.label}-${int.user.username}`,
-                parent: CONFIG.CATEGORY,
+                parent: CONFIG.CATEGORY_ID,
                 type: ChannelType.GuildText,
                 permissionOverwrites: [
                     { id: int.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
                     { id: int.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles] },
-                    ...setup.roles.map(r => ({ id: r, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] })),
-                    ...CONFIG.AUTH_USERS.map(u => ({ id: u, allow: [PermissionsBitField.Flags.ViewChannel] }))
+                    ...setup.roles.map(id => ({ id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] })),
+                    ...CONFIG.AUTH_USERS.map(id => ({ id, allow: [PermissionsBitField.Flags.ViewChannel] }))
                 ]
             });
 
-            const welcome = new EmbedBuilder()
-                .setTitle(`🎫 تـذكـرة جـديـدة | قـسم ${setup.label}`)
+            const welcomeEmbed = new EmbedBuilder()
+                .setTitle(`🎫 إسـتـمارة تـذكـرة جـديـدة | قـسم ${setup.label}`)
                 .setColor(setup.color)
-                .addFields(
-                    { name: '👤 الـعـضـو:', value: `${int.user} (${uInfo})`, inline: true },
-                    { name: '📝 الـمـوضـوع:', value: `\`\`\`${uIssue}\`\`\`` }
-                )
-                .setTimestamp();
+                .addFields(setup.fields)
+                .setTimestamp()
+                .setFooter({ text: 'One City RP Support System' });
 
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('close_now').setLabel('إغلاق التذكرة').setStyle(ButtonStyle.Danger)
-            );
+            const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('close_now').setLabel('إغلاق التذكرة').setStyle(ButtonStyle.Danger));
 
-            await channel.send({ content: `${int.user} | <@&${setup.roles[0] || CONFIG.AUTH_USERS[0]}>`, embeds: [welcome], components: [row] });
+            await channel.send({ content: `${int.user} | <@&${setup.roles[0]}>`, embeds: [welcomeEmbed], components: [row] });
             return int.editReply(`✅ تم فتح تذكرتك بنجاح: ${channel}`);
         } catch (e) {
-            console.error(e);
-            return int.editReply("❌ خطأ: تأكد أن رتبة البوت عالية ولديه صلاحية Administrator.");
+            return int.editReply(`❌ فشل إنشاء التذكرة. تأكد من صلاحيات البوت. الخطأ: ${e.message}`);
         }
     }
 
-    // 4. نظام الإغلاق
+    // 4. نظام الإغلاق والأرشيف
     if (int.isButton() && int.customId === 'close_now') {
-        await int.reply("🔒 جاري الحفظ والإغلاق...");
+        await int.reply("🔒 جاري حفظ البيانات وإغلاق القناة...");
         const msgs = await int.channel.messages.fetch({ limit: 100 });
-        let log = msgs.reverse().map(m => `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}`).join('\n');
+        let logStream = `--- ARCHIVE: ${int.channel.name} ---\n\n`;
+        msgs.reverse().forEach(m => { logStream += `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}\n`; });
 
-        const logChan = client.channels.cache.get(CONFIG.LOGS);
+        const logChan = client.channels.cache.get(CONFIG.LOGS_ID);
         if (logChan) {
             await logChan.send({ 
-                content: `📁 أرشيف تذكرة: ${int.channel.name}`,
-                files: [{ attachment: Buffer.from(log), name: `log-${int.channel.name}.txt` }] 
+                content: `📁 **أرشيف تذكرة: \`${int.channel.name}\`**\nبواسطة: ${int.user}`,
+                files: [{ attachment: Buffer.from(logStream), name: `log-${int.channel.name}.txt` }] 
             });
         }
-        setTimeout(() => int.channel.delete().catch(() => {}), 3000);
+        setTimeout(() => int.channel.delete().catch(() => {}), 4000);
     }
 });
 
