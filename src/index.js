@@ -23,22 +23,22 @@ const client = new Client({
     ]
 });
 
-// --- الإعدادات المحدثة ---
+// --- الإعدادات النهائية بأيدياتك الصحيحة ---
 const CONFIG = {
-    TOKEN: process.env.TOKEN || "ضـع_تـوكـن_هـنـا",
+    TOKEN: process.env.TOKEN || "ضع_توكن_البوت_هنا",
     CLIENT_ID: "1381360453485334658", 
     GUILD_ID: "1381360453485334658",
     
-    // القائمة المسموح لها باستخدام أمر /setup
+    // الأيديات المسموح لها باستخدام أمر الـ Setup
     AUTHORIZED_USERS: [
-        "1517002644676411592", // الآيدي الخاص بك (المالك)
-        // يمكنك إضافة آيديات أخرى هنا بنفس التنسيق
+        "1349214233262297149", // الآيدي الجديد الخاص بك
+        "1517002644676411592"  
     ],
 
     CATEGORY_TICKETS: "1517931717061771294",
     LOG_CHANNEL: "1517942325383270502",
     
-    // الرتب التي ترى بلاغات (لاعب/إداري)
+    // من يرى بلاغات اللاعبين والإداريين
     STAFF_ROLES: [
         "1517002645666267197",
         "1517931426069348446",
@@ -46,145 +46,157 @@ const CONFIG = {
         "1517931425372962947"
     ],
     
-    // رتبة الدعم الفني
+    // من يرى الدعم الفني
     TECH_ROLE: "1517931445149241356"
 };
 
 const commands = [{
     name: 'setup',
-    description: 'إنشاء لوحة التذاكر الاحترافية'
+    description: 'تجهيز لوحة تذاكر مدينة One City RP'
 }];
 
 const rest = new REST({ version: '10' }).setToken(CONFIG.TOKEN);
 
 client.once('ready', async () => {
-    console.log(`✅ البوت متصل: ${client.user.tag}`);
+    console.log(`✅ تم التشغيل بنجاح | المالك الحالي: Mad Max`);
     try {
         await rest.put(Routes.applicationGuildCommands(client.user.id, CONFIG.GUILD_ID), { body: commands });
-        console.log('✅ تم تحديث أوامر Slash');
+        console.log('✅ تم تسجيل أوامر الـ Slash بنجاح');
     } catch (error) {
         console.error(error);
     }
 });
 
 client.on('interactionCreate', async (interaction) => {
-    // التحقق من أمر /setup
+    
+    // 1. أمر السيت اب (Setup)
     if (interaction.isChatInputCommand() && interaction.commandName === 'setup') {
         if (!CONFIG.AUTHORIZED_USERS.includes(interaction.user.id)) {
-            return interaction.reply({ content: `❌ نعتذر ${interaction.user}، هذا الأمر مخصص للإدارة العليا فقط.`, ephemeral: true });
+            return interaction.reply({ content: "❌ عذراً، هذا الأمر مخصص للإدارة العليا فقط.", ephemeral: true });
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle("🌆 One City RP | نـظـام الـبـلاغـات والـدعم")
+        const mainEmbed = new EmbedBuilder()
+            .setTitle("🌆 **ONE CITY ROLEPLAY | الـدعم الـفـنـي**")
             .setDescription(`
-                \n**أهلاً بـك فـي مـديـنـة One City**\n
-                نـحن نـقـدر تـواجـدك مـعـنا، ونـسـعى لـتوفـير أفـضل تـجـربـة لـعـب.
-                إذا كـنـت تـواجـه مـشـكـلـة أو تـود تـقـديـم بـلاغ، اخـتـر الـقـسـم الـمـنـاسـب:\n
-                🟢 **بـلاغ ضـد لاعـب** : لـتـقـديـم بـلاغ عـن مـخـالـف لـلـقـوانـيـن.
-                🔴 **بـلاغ ضـد إداري** : لـلـتـوجـه لـلإدارة الـعـلـيا بـشأن طـاقـم الـعـمـل.
-                ⚫ **الـدعم الـفـنـي** : لـلـمـسـاعـدة الـتـقـنـية أو الاسـتـفـسـارات الـعـامـة.
-                \n*يـرجـى الـتـأكـد مـن إدخـال بـيـانـاتـك الـصـحـيـحـة عـنـد الـضـغـط عـلـى الـزر.*
+                \n**أهـلاً بـك فـي مـديـنـة One City.. حـيـث لـلـواقـعـيـة مـعـنى آخـر**\n
+                نـحـن هـنـا لـنـسـمـعـك، نـسـاعـدك، ونـضـمـن لـك بـيـئـة لـعـب عـادلة ومـحـتـرفـة.
+                اخـتـر الـقـسم الـمـنـاسب لـحـالـتـك وسـيـتـم الـرد عـلـيـك مـن قـبـل الـمـخـتـصـيـن:\n
+                🟢 **بـلاغ ضـد لاعـب**
+                *لـتـقـديـم شكوى بـخـصوص مـخـالـفات الـقوانين داخـل الـمدينة.*
+
+                🔴 **بـلاغ ضـد إداري**
+                *لـلـتواصل مع الإدارة الـعـلـيا بـشأن أي مـلاحظات عـلى طـاقم الـعمل.*
+
+                ⚫ **الـدعم الـفـنـي**
+                *لـلـمساعدة في الـمشاكل الـتـقنية، الـبـوقات، أو الاسـتـفسارات.*
+                \n─── ⋆⋅☆⋅⋆ ───
+                **تـنـبـيـه:** بـعـد الضـغـط عـلـى الـزر، سـيـطـلـب مـنـك الـبوت إدخـال بـيـانـاتـك.
             `)
             .setColor("#FF0000") // أحمر لامع فخم
-            .setThumbnail(interaction.guild.iconURL())
-            .setFooter({ text: "One City RP - Quality Service", iconURL: interaction.guild.iconURL() });
+            .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
+            .setFooter({ text: "One City RP Management", iconURL: interaction.guild.iconURL() });
 
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('p_ticket').setLabel('ضد لاعب').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('s_ticket').setLabel('ضد اداري').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('t_ticket').setLabel('الدعم الفني').setStyle(ButtonStyle.Secondary)
+        const buttons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('op_player').setLabel('ضد لاعب').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('op_staff').setLabel('ضد اداري').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('op_tech').setLabel('الدعم الفني').setStyle(ButtonStyle.Secondary)
         );
 
-        return interaction.reply({ embeds: [embed], components: [row] });
+        return interaction.reply({ embeds: [mainEmbed], components: [buttons] });
     }
 
-    // التعامل مع الأزرار والمودال
-    if (interaction.isButton() && interaction.customId.endsWith('_ticket')) {
+    // 2. إظهار المودال (الاستمارة)
+    if (interaction.isButton() && interaction.customId.startsWith('op_')) {
         const modal = new ModalBuilder()
             .setCustomId(`modal_${interaction.customId}`)
-            .setTitle('تـعـبـئـة بـيـانـات الـتـذكـرة');
+            .setTitle('نـمـوذج فـتـح تـذكـرة');
 
-        const input1 = new TextInputBuilder()
-            .setCustomId('user_data')
+        const nameInput = new TextInputBuilder()
+            .setCustomId('field_1')
             .setLabel("الاسم والآيدي الخاص بك")
+            .setPlaceholder("مثال: احمد | 1349")
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
-        const input2 = new TextInputBuilder()
-            .setCustomId('reason_data')
-            .setLabel("تـفـاصـيـل الـطـلـب / الـبـلاغ")
+        const reasonInput = new TextInputBuilder()
+            .setCustomId('field_2')
+            .setLabel("شرح المشكلة أو البلاغ")
+            .setPlaceholder("اكتب تفاصيل ما حدث هنا...")
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true);
 
-        modal.addComponents(new ActionRowBuilder().addComponents(input1), new ActionRowBuilder().addComponents(input2));
+        modal.addComponents(new ActionRowBuilder().addComponents(nameInput), new ActionRowBuilder().addComponents(reasonInput));
         return interaction.showModal(modal);
     }
 
-    // فتح التذكرة بعد إرسال المودال
+    // 3. معالجة المودال وفتح القناة
     if (interaction.isModalSubmit()) {
         await interaction.deferReply({ ephemeral: true });
-        
-        const userData = interaction.fields.getTextInputValue('user_data');
-        const reasonData = interaction.fields.getTextInputValue('reason_data');
+
+        const uName = interaction.fields.getTextInputValue('field_1');
+        const uReason = interaction.fields.getTextInputValue('field_2');
         const type = interaction.customId;
 
-        let info = { name: "ticket", color: "#FFFFFF", roles: [CONFIG.AUTHORIZED_USERS[0]] };
-        
-        if (type.includes('p_ticket')) {
-            info = { name: "player", color: "#00FF00", roles: [...CONFIG.STAFF_ROLES] };
-        } else if (type.includes('s_ticket')) {
-            info = { name: "staff", color: "#FF0000", roles: [...CONFIG.STAFF_ROLES] };
+        let settings = { name: "تذكرة", color: "#FFFFFF", roles: [] };
+
+        if (type.includes('player')) {
+            settings = { name: "ضد-لاعب", color: "#00FF00", roles: CONFIG.STAFF_ROLES };
+        } else if (type.includes('staff')) {
+            settings = { name: "ضد-اداري", color: "#FF0000", roles: CONFIG.STAFF_ROLES };
         } else {
-            info = { name: "tech", color: "#1A1A1A", roles: [CONFIG.TECH_ROLE] };
+            settings = { name: "دعم-فني", color: "#000000", roles: [CONFIG.TECH_ROLE] };
         }
 
-        const channel = await interaction.guild.channels.create({
-            name: `${info.name}-${interaction.user.username}`,
+        const ticketChannel = await interaction.guild.channels.create({
+            name: `${settings.name}-${interaction.user.username}`,
             type: ChannelType.GuildText,
             parent: CONFIG.CATEGORY_TICKETS,
             permissionOverwrites: [
                 { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-                ...info.roles.map(r => ({ id: r, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] })),
+                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles] },
+                ...settings.roles.map(r => ({ id: r, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] })),
                 ...CONFIG.AUTHORIZED_USERS.map(u => ({ id: u, allow: [PermissionsBitField.Flags.ViewChannel] }))
             ]
         });
 
-        const ticketEmbed = new EmbedBuilder()
-            .setTitle(`🎫 تذكرة جديدة | ${info.name.toUpperCase()}`)
-            .setColor(info.color)
+        const welcomeEmbed = new EmbedBuilder()
+            .setTitle(`🎫 تذكرة جديدة | ${settings.name}`)
+            .setColor(settings.color)
             .addFields(
-                { name: "👤 العضو:", value: `${interaction.user} (${userData})`, inline: true },
-                { name: "📝 السبب:", value: reasonData }
+                { name: "👤 العضو:", value: `${interaction.user} (${uName})`, inline: true },
+                { name: "📝 الموضوع:", value: uReason }
             )
-            .setTimestamp();
+            .setTimestamp()
+            .setFooter({ text: "One City RP Ticket System" });
 
         const closeBtn = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('close_ticket').setLabel('إغلاق وحفظ').setStyle(ButtonStyle.Danger)
+            new ButtonBuilder().setCustomId('close_ticket_now').setLabel('إغلاق وحفظ المحادثة').setStyle(ButtonStyle.Danger)
         );
 
-        await channel.send({ content: `@here`, embeds: [ticketEmbed], components: [closeBtn] });
-        return interaction.editReply(`✅ تم فتح تذكرتك بنجاح: ${channel}`);
+        await ticketChannel.send({ content: `@here`, embeds: [welcomeEmbed], components: [closeBtn] });
+        return interaction.editReply(`✅ تم إنشاء تذكرتك بنجاح: ${ticketChannel}`);
     }
 
-    // نظام الإغلاق واللوج النصي
-    if (interaction.isButton() && interaction.customId === 'close_ticket') {
+    // 4. نظام الإغلاق والأرشفة النصية
+    if (interaction.isButton() && interaction.customId === 'close_ticket_now') {
         const channel = interaction.channel;
-        await interaction.reply("🔒 جاري حفظ المحادثة وإغلاق التذكرة...");
+        await interaction.reply("🔒 جاري حفظ نسخة من المحادثة وإغلاق القناة...");
 
         const messages = await channel.messages.fetch({ limit: 100 });
-        let logText = `--- ARCHIVE: ${channel.name} ---\n`;
+        let logStream = `--- LOG ARCHIVE FOR: ${channel.name} ---\n\n`;
+        
         messages.reverse().forEach(m => {
-            logText += `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}\n`;
+            logStream += `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}\n`;
         });
 
         const logChannel = client.channels.cache.get(CONFIG.LOG_CHANNEL);
         if (logChannel) {
-            await logChannel.send({ content: `📁 **تم إغلاق تذكرة: ${channel.name}**\nبواسطة: ${interaction.user}` });
-            await logChannel.send({ content: `\`\`\`text\n${logText.substring(0, 1900)}\n\`\`\`` });
+            await logChannel.send({ content: `📁 **أرشيف تذكرة مغلقة**\nالقناة: \`${channel.name}\`\nالمسؤول: ${interaction.user}` });
+            // إرسال النص (بحد أقصى 2000 حرف للرسالة الواحدة)
+            await logChannel.send({ content: `\`\`\`text\n${logStream.substring(0, 1900)}\n\`\`\`` });
         }
 
-        setTimeout(() => channel.delete(), 5000);
+        setTimeout(() => channel.delete().catch(() => {}), 5000);
     }
 });
 
